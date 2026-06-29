@@ -88,6 +88,12 @@ const imgLoader = (() => {
     }, { rootMargin: ROOT_MARGIN });
 
     return {
+        // Called externally (e.g. from modal icon onload) to register a URL as
+        // successfully loaded. Enables instant re-use in observe() calls.
+        markLoaded(url) {
+            if (url) loaded.add(url);
+        },
+
         // After setting innerHTML, call this to watch all img[data-src] in the container.
         observe(container) {
             if (!container) return;

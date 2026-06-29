@@ -39,7 +39,9 @@
                 spellcheck="false"
                 placeholder="·  ·  ·  ·  ·  ·"
                 aria-label="Access code"
+                inputmode="numeric"
             >
+            <button id="gate-submit" class="gate-submit" aria-label="Submit passcode">💰 Enter</button>
             <div class="gate-hint" id="gate-hint"></div>
         </div>`;
     document.body.prepend(gate);
@@ -50,6 +52,7 @@
     const input   = document.getElementById('gate-input');
     const hint    = document.getElementById('gate-hint');
     const box     = gate.querySelector('.gate-box');
+    const submit  = document.getElementById('gate-submit');
     let   tries   = 0;
     let   locked  = false;
     let   lockTimer;
@@ -92,10 +95,8 @@
         tick();
     }
 
-    input.addEventListener('keydown', e => {
-        if (e.key !== 'Enter') return;
+    function attempt() {
         if (locked) return;
-
         const val = input.value;
         if (val === PASSCODE) {
             hint.textContent = '';
@@ -111,7 +112,10 @@
                 hint.className = 'gate-hint gate-err';
             }
         }
-    });
+    }
+
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
+    submit.addEventListener('click',   () => attempt());
 
     // Clear error hint while typing
     input.addEventListener('input', () => {

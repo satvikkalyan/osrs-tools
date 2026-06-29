@@ -156,17 +156,27 @@ function renderFavoritesTab() {
     const empty = document.getElementById('favorites-empty');
     if (!grid) return;
 
+    // If data hasn't loaded yet, show a brief loading state and bail out.
+    // onDataRefreshed() (called unconditionally) will re-invoke us once data arrives.
+    if (!state.items.length && !state.searchItems?.length) {
+        const total = favs.flips.size + favs.drops.size + favs.decant.size + favs.repair.size;
+        if (total > 0) {
+            empty.style.display = 'none';
+            grid.innerHTML = '<div class="fav-loading">Loading price data…</div>';
+        }
+        return;
+    }
+
     const cards = [];
 
     for (const idStr of favs.flips) {
-        const id   = parseInt(idStr, 10);
-        const item = state.items?.find(x => x.id === id)
-                  || state.searchItems?.find(x => x.id === id);
+        // Use String comparison to be safe against numeric/string ID type mismatch
+        const item = state.items?.find(x => String(x.id) === idStr)
+                  || state.searchItems?.find(x => String(x.id) === idStr);
         if (item) cards.push(flipCard(item));
     }
     for (const idStr of favs.drops) {
-        const id   = parseInt(idStr, 10);
-        const drop = detectedDrops.find(d => d.itemId === id);
+        const drop = detectedDrops.find(d => String(d.itemId) === idStr);
         if (drop) cards.push(dropCard(drop));
     }
     for (const base of favs.decant) {
@@ -209,14 +219,11 @@ function renderFavoritesTab() {
     });
 }
 
-// Re-render favorites cards whenever the main data refreshes
-const _origRender = typeof render === 'function' ? render : null;
-
-// Hook into fetchData completion — called after api.js sets state
+// Hook into fetchData completion — called after api.js sets state.
+// Always re-render so that if the user hit the favorites tab before data
+// loaded (showing an empty grid), the cards appear as soon as data arrives.
 function onDataRefreshed() {
-    if (document.getElementById('favorites-tab')?.style.display !== 'none') {
-        renderFavoritesTab();
-    }
+    renderFavoritesTab();
 }
 
 updateFavBadge();

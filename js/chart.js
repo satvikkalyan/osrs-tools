@@ -72,8 +72,16 @@ function openChartModal(item) {
         `Buy limit ${item.buyLimit ? item.buyLimit.toLocaleString() : '—'} per 4h` +
         (item.taxExempt ? '  ·  Tax-exempt' : '');
     const icon = document.getElementById('modal-icon');
-    icon.src = item.icon ? getIconSrc(item.icon) : '';
-    icon.style.display = item.icon ? 'inline-block' : 'none';
+    if (item.icon) {
+        const iconUrl = getIconSrc(item.icon);
+        icon.onload  = () => imgLoader.markLoaded(iconUrl);
+        icon.onerror = () => {};
+        icon.src     = iconUrl;
+        icon.style.display = 'inline-block';
+    } else {
+        icon.src = '';
+        icon.style.display = 'none';
+    }
 
     // Snapshot stats (current values, after-tax)
     setText('modal-buy', formatGp(item.buy));

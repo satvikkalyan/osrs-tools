@@ -57,7 +57,6 @@ function render() {
     });
 
     tbody.innerHTML = rendered.map((it, i) => rowHtml(it, i)).join('');
-    imgLoader.observe(tbody);
 
     // Flash cells whose values changed since the last render
     if (oldPrices.size) {
@@ -156,8 +155,11 @@ function rowHtml(item, idx) {
     const iconUrl = item.icon
         ? getIconSrc(item.icon)
         : '';
+    // Use native browser lazy loading — simpler and more reliable than the
+    // custom imgLoader queue, which dropped queued elements whenever render()
+    // replaced tbody.innerHTML (e.g. on auto-refresh). The SW handles caching.
     const icon = iconUrl
-        ? `<img class="item-icon" data-src="${iconUrl}" src="" alt="" onerror="this.outerHTML='<div class=icon-placeholder></div>'">`
+        ? `<img class="item-icon" src="${iconUrl}" loading="lazy" alt="" onerror="this.outerHTML='<div class=icon-placeholder></div>'">`
         : '<div class="icon-placeholder"></div>';
     const badges = [];
     badges.push(`<span class="badge ${item.members ? 'badge-mem' : 'badge-f2p'}">${item.members ? 'P2P' : 'F2P'}</span>`);
