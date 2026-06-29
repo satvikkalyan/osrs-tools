@@ -134,6 +134,7 @@ function renderRepairTab() {
                 ${r.profitPerHour > 0 ? formatGp(r.profitPerHour) + '/hr' : '—'}
             </td>
             <td class="num mono ${r.dailyVolume ? volClass(r.dailyVolume) : 'dim'}">${r.dailyVolume ? r.dailyVolume.toLocaleString() : '—'}</td>
+            ${starTd('repair', r.name)}
         </tr>`;
     }).join('');
 

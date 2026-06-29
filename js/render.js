@@ -28,7 +28,7 @@ function render() {
     setText('stat-shown', filtered.length.toLocaleString());
     setText('stat-shown-sub', filtered.length === state.items.length ? 'all filters off' : 'after filters');
     if (sorted.length) {
-        setText('stat-top', formatGp(sorted[0].profitPerHour) + '/hr');
+        setText('stat-top', formatGp(sorted[0].profitPerFlip || sorted[0].profitPerHour) + '/flip');
         setText('stat-top-sub', sorted[0].name);
     } else {
         setText('stat-top', '—');
@@ -144,7 +144,8 @@ function rowHtml(item, idx) {
             <td class="num mono ${volClass(item.dailyVolume)}" title="Daily total: ${item.dailyVolume.toLocaleString()}  ·  1h: ${item.volume.toLocaleString()} (min of buy/sell)">${item.dailyVolume.toLocaleString()}</td>
             <td class="num mono mob-hide">${item.buyLimit ? item.buyLimit.toLocaleString() : '<span class="dim">—</span>'}</td>
             <td class="num mono mob-hide ${ageClass}">${ageDisplay}</td>
-            <td class="num mono profit-cell">${formatGp(item.profitPerHour)}</td>
+            <td class="num mono profit-cell">${item.profitPerFlip ? formatGp(item.profitPerFlip) : '<span class="dim">—</span>'}</td>
+            ${starTd('flips', item.id)}
         </tr>
     `;
 }

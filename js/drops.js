@@ -100,18 +100,12 @@ function updatePriceHistoryAndDetect(items) {
         });
     }
 
-    // On every refresh, check whether previously detected drops have recovered.
-    // A drop is considered recovered when the current buy price is back above
-    // 95% of the baseline it dropped from. We re-mark on every call so the
-    // status stays accurate even after multiple refreshes.
-    detectedDrops = detectedDrops.map(drop => {
-        if (drop.recovered) return drop; // already recovered, keep as-is
+    // On every refresh, remove drops where the price has recovered above 95%
+    // of its baseline. No reason to keep showing them.
+    detectedDrops = detectedDrops.filter(drop => {
         const currentItem = items.find(x => x.id === drop.itemId);
-        if (!currentItem || !currentItem.buy) return drop;
-        if (currentItem.buy >= drop.fromPrice * 0.95) {
-            return { ...drop, recovered: true, recoveredAt: now };
-        }
-        return drop;
+        if (!currentItem || !currentItem.buy) return true; // keep if we have no price data
+        return currentItem.buy < drop.fromPrice * 0.95;   // remove if recovered
     });
 
     if (newDrops.length) {
@@ -301,11 +295,8 @@ function dropRowHtml(drop) {
     const yoursBadge = isYours
         ? '<span class="badge badge-yours" title="In your imported trade history">★ yours</span>'
         : '';
-    const recoveredBadge = drop.recovered
-        ? '<span class="badge badge-recovered" title="Price has recovered above 95% of baseline">↑ recovered</span>'
-        : '';
     return `
-        <tr data-item-id="${drop.itemId}"${drop.recovered ? ' class="drop-recovered"' : ''}>
+        <tr data-item-id="${drop.itemId}">
             <td>
                 <div class="item-cell">
                     ${icon}
@@ -315,7 +306,6 @@ function dropRowHtml(drop) {
                             <span>Buy limit ${drop.buyLimit ? drop.buyLimit.toLocaleString() : '—'}</span>
                             ${watchBadge}
                             ${yoursBadge}
-                            ${recoveredBadge}
                         </div>
                     </div>
                 </div>
@@ -326,6 +316,7 @@ function dropRowHtml(drop) {
             <td class="num mono mob-hide">${drop.windowMin.toFixed(0)}m</td>
             <td class="num mono mob-hide">${drop.dailyVolume.toLocaleString()}</td>
             <td class="num drop-time">${ago}</td>
+            ${starTd('drops', drop.itemId)}
             <td class="num"><button class="drop-dismiss" data-drop-id="${drop.itemId}" data-drop-ts="${drop.detectedAt}" title="Dismiss">✕</button></td>
         </tr>
     `;

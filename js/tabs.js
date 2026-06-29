@@ -18,13 +18,15 @@ document.querySelectorAll('#tabs .tab').forEach(tab => {
         document.querySelectorAll('#tabs .tab').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         const which = tab.dataset.tab;
-        document.getElementById('flips-tab').style.display = which === 'flips' ? 'block' : 'none';
-        document.getElementById('drops-tab').style.display = which === 'drops' ? 'block' : 'none';
-        document.getElementById('decant-tab').style.display = which === 'decant' ? 'block' : 'none';
-        document.getElementById('repair-tab').style.display = which === 'repair' ? 'block' : 'none';
-        if (which === 'drops') renderDropsTab();
-        if (which === 'decant') renderDecantTab();
-        if (which === 'repair') renderRepairTab();
+        document.getElementById('flips-tab').style.display     = which === 'flips'     ? 'block' : 'none';
+        document.getElementById('drops-tab').style.display     = which === 'drops'     ? 'block' : 'none';
+        document.getElementById('decant-tab').style.display    = which === 'decant'    ? 'block' : 'none';
+        document.getElementById('repair-tab').style.display    = which === 'repair'    ? 'block' : 'none';
+        document.getElementById('favorites-tab').style.display = which === 'favorites' ? 'block' : 'none';
+        if (which === 'drops')     renderDropsTab();
+        if (which === 'decant')    renderDecantTab();
+        if (which === 'repair')    renderRepairTab();
+        if (which === 'favorites') renderFavoritesTab();
     });
 });
 

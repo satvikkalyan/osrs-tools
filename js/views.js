@@ -1,62 +1,74 @@
 'use strict';
-// ---------- Global view tracking + Trending sidebar ----------
-// Counts how many times each item's chart is opened, stores it in Supabase
-// (global, shared across all users) with localStorage as an offline fallback.
+// ---------- Global view + flip tracking, Trending sidebar ----------
+// Counts how many times each item's chart is opened (views) and how many
+// times the "Placed order" button is clicked (flips). Stored in Supabase
+// (global, shared across all users) with localStorage as offline fallback.
 //
-// To enable global mode: fill in SUPABASE_URL + SUPABASE_ANON_KEY in
-// constants.js and run SUPABASE_SETUP.sql in your Supabase SQL editor.
-// Without credentials, counts are stored locally per browser only.
+// Trending sort: items with flips first, ranked by flip/view ratio descending.
+// Items with zero flips rank by view count. Min daily volume: 40k enforced.
+
+const VIEWS_LOCAL_KEY  = 'osrs-view-counts';
+const FLIPS_LOCAL_KEY  = 'osrs-flip-counts';
+const MIN_DAILY_VOL    = 40_000;
 
 let viewsCache   = null;
 let viewsCacheTs = 0;
-const VIEWS_CACHE_TTL_MS = 5 * 60 * 1000; // re-fetch at most every 5 min
-const VIEWS_LOCAL_KEY    = 'osrs-view-counts'; // localStorage key
+const VIEWS_CACHE_TTL_MS = 3 * 60 * 1000; // bust every 3 min
 
 // ---------- Supabase helpers ----------
 
 function sbHeaders() {
-    // Supports both legacy anon key (eyJ...) and new publishable key (sb_publishable_...)
     const headers = {
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         'Content-Type':  'application/json',
         'Prefer':        'return=minimal',
     };
-    // Legacy key format also needs the apikey header
-    if (SUPABASE_ANON_KEY.startsWith('eyJ')) {
-        headers['apikey'] = SUPABASE_ANON_KEY;
-    }
+    if (SUPABASE_ANON_KEY.startsWith('eyJ')) headers['apikey'] = SUPABASE_ANON_KEY;
     return headers;
 }
 
 const sbEnabled = () => !!(SUPABASE_URL && SUPABASE_ANON_KEY);
 
-// ---------- Track a view ----------
+// ---------- View tracking ----------
 
 function trackView(item) {
     if (!item) return;
-
-    // 1. Always update localStorage immediately (instant local sidebar refresh)
     const local = JSON.parse(localStorage.getItem(VIEWS_LOCAL_KEY) || '{}');
     local[item.id] = (local[item.id] || 0) + 1;
     localStorage.setItem(VIEWS_LOCAL_KEY, JSON.stringify(local));
-
-    // Bust sidebar cache so reopening it reflects the new count
     viewsCacheTs = 0;
 
-    // 2. Fire-and-forget increment to Supabase
     if (!sbEnabled()) return;
     fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_view`, {
         method: 'POST',
         headers: sbHeaders(),
-        body: JSON.stringify({
-            p_item_id: item.id,
-            p_name:    item.name,
-            p_icon:    item.icon || '',
-        }),
-    }).catch(() => {}); // non-fatal — never block the UI for analytics
+        body: JSON.stringify({ p_item_id: item.id, p_name: item.name, p_icon: item.icon || '' }),
+    }).catch(() => {});
 }
 
-// ---------- Fetch top viewed ----------
+// ---------- Flip tracking ----------
+
+function trackFlip(item) {
+    if (!item) return;
+    const local = JSON.parse(localStorage.getItem(FLIPS_LOCAL_KEY) || '{}');
+    local[item.id] = (local[item.id] || 0) + 1;
+    localStorage.setItem(FLIPS_LOCAL_KEY, JSON.stringify(local));
+    viewsCacheTs = 0; // bust trending cache
+
+    if (!sbEnabled()) return;
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_flip`, {
+        method: 'POST',
+        headers: sbHeaders(),
+        body: JSON.stringify({ p_item_id: item.id, p_name: item.name, p_icon: item.icon || '' }),
+    }).catch(() => {});
+}
+
+function getFlipCount(itemId) {
+    const local = JSON.parse(localStorage.getItem(FLIPS_LOCAL_KEY) || '{}');
+    return local[itemId] || 0;
+}
+
+// ---------- Fetch + sort trending ----------
 
 async function fetchTopViewed(limit = 25) {
     const now = Date.now();
@@ -64,12 +76,14 @@ async function fetchTopViewed(limit = 25) {
 
     if (sbEnabled()) {
         try {
+            // Fetch enough rows to filter by vol and then take top N
             const res = await fetch(
-                `${SUPABASE_URL}/rest/v1/item_views?order=view_count.desc&limit=${limit}`,
-                { headers: sbHeaders() }
+                `${SUPABASE_URL}/rest/v1/item_views?order=view_count.desc&limit=200`,
+                { headers: { ...sbHeaders(), Prefer: '' } }
             );
             if (!res.ok) throw new Error(`Supabase ${res.status}`);
-            viewsCache   = await res.json();
+            const rows = await res.json();
+            viewsCache   = trendingSort(rows, limit);
             viewsCacheTs = now;
             return viewsCache;
         } catch (e) {
@@ -77,28 +91,55 @@ async function fetchTopViewed(limit = 25) {
         }
     }
 
-    // Local fallback — build from localStorage + current item state
     return localTopViewed(limit);
 }
 
+// Sort rows by: flip/view ratio desc (items with flips first), then view_count desc.
+// Also enforces MIN_DAILY_VOL by cross-referencing local item state.
+function trendingSort(rows, limit) {
+    const allItems = [...(state.items || []), ...(state.searchItems || [])];
+    const volById  = new Map(allItems.map(x => [x.id, x.dailyVolume || 0]));
+
+    return rows
+        .filter(r => (volById.get(r.item_id) || 0) >= MIN_DAILY_VOL)
+        .map(r => ({
+            ...r,
+            flip_count: r.flip_count || 0,
+            ratio: r.view_count > 0 ? (r.flip_count || 0) / r.view_count : 0,
+        }))
+        .sort((a, b) => {
+            // Items with at least one flip rank above zero-flip items
+            const aHasFlips = a.flip_count > 0;
+            const bHasFlips = b.flip_count > 0;
+            if (aHasFlips !== bHasFlips) return bHasFlips - aHasFlips;
+            // Among items with flips: sort by ratio desc
+            if (aHasFlips && bHasFlips && a.ratio !== b.ratio) return b.ratio - a.ratio;
+            // Fall back to raw view count
+            return b.view_count - a.view_count;
+        })
+        .slice(0, limit);
+}
+
 function localTopViewed(limit = 25) {
-    const counts  = JSON.parse(localStorage.getItem(VIEWS_LOCAL_KEY) || '{}');
+    const views = JSON.parse(localStorage.getItem(VIEWS_LOCAL_KEY) || '{}');
+    const flips = JSON.parse(localStorage.getItem(FLIPS_LOCAL_KEY) || '{}');
     const allItems = [...(state.items || []), ...(state.searchItems || [])];
     const byId = new Map(allItems.map(x => [x.id, x]));
 
-    return Object.entries(counts)
-        .map(([idStr, count]) => {
-            const id   = parseInt(idStr, 10);
-            const item = byId.get(id);
-            return {
-                item_id:    id,
-                name:       item?.name || `Item #${id}`,
-                icon:       item?.icon || '',
-                view_count: count,
-            };
-        })
-        .sort((a, b) => b.view_count - a.view_count)
-        .slice(0, limit);
+    const rows = Object.entries(views).map(([idStr, vc]) => {
+        const id   = parseInt(idStr, 10);
+        const item = byId.get(id);
+        return {
+            item_id:    id,
+            name:       item?.name  || `Item #${id}`,
+            icon:       item?.icon  || '',
+            view_count: vc,
+            flip_count: flips[idStr] || 0,
+            dailyVol:   item?.dailyVolume || 0,
+        };
+    });
+
+    return trendingSort(rows.map(r => ({ ...r, item_id: r.item_id })), limit);
 }
 
 // ---------- Sidebar UI ----------
@@ -124,25 +165,31 @@ async function loadSidebarContent() {
     const items = await fetchTopViewed(25);
 
     if (!items || !items.length) {
-        list.innerHTML = '<div class="sidebar-empty">No views yet.<br>Open any item chart to start tracking!</div>';
+        list.innerHTML = '<div class="sidebar-empty">No data yet.<br>Open items and hit "Placed order" to start tracking!</div>';
         footer.textContent = '';
         return;
     }
 
     const isGlobal = sbEnabled();
-    footer.textContent = isGlobal ? '🌐 Global · updated live' : '💾 Local only · add Supabase for global';
+    footer.textContent = isGlobal ? '🌐 Global · flip ratio ranked' : '💾 Local only · add Supabase for global';
 
     list.innerHTML = items.map((row, i) => {
-        const iconUrl = row.icon ? getIconSrc(row.icon) : '';
+        const iconUrl  = row.icon ? getIconSrc(row.icon) : '';
         const iconHtml = iconUrl
             ? `<img class="sidebar-icon" data-src="${iconUrl}" src="" alt="" onerror="this.style.display='none'">`
             : '<span class="sidebar-icon-placeholder"></span>';
+        const flipCount = row.flip_count || 0;
+        const viewCount = row.view_count || 0;
+        const ratioStr  = viewCount > 0 ? ((flipCount / viewCount) * 100).toFixed(0) + '%' : '—';
+        const metaHtml  = flipCount > 0
+            ? `<span class="sidebar-meta">${flipCount}↑ / ${viewCount}👁 <span class="sidebar-ratio">${ratioStr}</span></span>`
+            : `<span class="sidebar-meta">${viewCount}👁</span>`;
         return `
         <div class="sidebar-item" data-item-id="${row.item_id}" role="button" tabindex="0">
             <span class="sidebar-rank">#${i + 1}</span>
             ${iconHtml}
             <span class="sidebar-name">${escapeHtml(row.name)}</span>
-            <span class="sidebar-count">${Number(row.view_count).toLocaleString()}</span>
+            ${metaHtml}
         </div>`;
     }).join('');
 

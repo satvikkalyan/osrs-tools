@@ -50,6 +50,7 @@ async function fetchData() {
         renderDecantTab();
         computeRepairs(mapping, latest.data);
         renderRepairTab();
+        if (typeof onDataRefreshed === 'function') onDataRefreshed();
     } catch (err) {
         console.error('Flip Finder load failed:', err);
         showError(`Couldn't load prices: ${err.message || err}`);

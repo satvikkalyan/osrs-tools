@@ -38,3 +38,4 @@ const UNLIMITED_PROXY = 1_000_000;
 // (e.g. opening index.html directly from the filesystem).
 if (typeof SUPABASE_URL      === 'undefined') var SUPABASE_URL      = '';
 if (typeof SUPABASE_ANON_KEY === 'undefined') var SUPABASE_ANON_KEY = '';
+if (typeof PASSCODE          === 'undefined') var PASSCODE          = '';

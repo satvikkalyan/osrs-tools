@@ -133,6 +133,7 @@ function renderDecantTab() {
             <td class="num mono ${profitClass} ${r.profit > 0 ? 'profit-cell' : ''}">${r.profit > 0 ? '+' : ''}${formatGp(Math.round(r.profit))} gp</td>
             <td class="num mono dim mob-hide">${r.profitPerFlip != null ? formatGp(r.profitPerFlip) + ' gp' : '—'}</td>
             <td class="num mono ${r.dailyVolume ? volClass(r.dailyVolume) : 'dim'}">${r.dailyVolume ? r.dailyVolume.toLocaleString() : '—'}</td>
+            ${starTd('decant', r.base)}
         </tr>`;
     }).join('');
 

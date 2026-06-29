@@ -59,6 +59,10 @@
         </button>
         <button class="tab" data-tab="decant">Decant</button>
         <button class="tab" data-tab="repair">Repair</button>
+        <button class="tab" data-tab="favorites">
+            <span>⭐ Favorites</span>
+            <span class="tab-badge" id="favorites-badge" style="display:none;">0</span>
+        </button>
     </div>
 
     <!-- FLIPS TAB -->
@@ -75,7 +79,7 @@
                 <div class="stat-sub" id="stat-shown-sub"></div>
             </div>
             <div class="stat">
-                <div class="stat-label">Top profit/hour (after tax)</div>
+                <div class="stat-label">Top profit/flip (after tax)</div>
                 <div class="stat-value" id="stat-top">—</div>
                 <div class="stat-sub" id="stat-top-sub"></div>
             </div>
@@ -98,7 +102,7 @@
             </div>
             <div class="control">
                 <label>Min daily volume</label>
-                <input type="number" id="filter-min-volume" placeholder="no limit" min="0" class="mono">
+                <input type="number" id="filter-min-volume" value="40000" min="0" class="mono">
             </div>
             <div class="control">
                 <label>Max buy price (capital)</label>
@@ -149,7 +153,8 @@
                         <th data-sort="dailyVolume" class="num">Daily vol</th>
                         <th data-sort="buyLimit" class="num mob-hide">4h limit</th>
                         <th data-sort="ageMin" class="num mob-hide">Age</th>
-                        <th data-sort="profitPerHour" class="num">Profit/hr</th>
+                        <th data-sort="profitPerFlip" class="num">Profit/flip</th>
+                        <th class="star-col"></th>
                     </tr>
                 </thead>
                 <tbody id="tbody"></tbody>
@@ -215,6 +220,7 @@
                         <th class="num mob-hide" data-sort="windowMin">Window</th>
                         <th class="num mob-hide" data-sort="dailyVolume">Daily vol</th>
                         <th class="num" data-sort="detectedAt">Detected</th>
+                        <th class="star-col"></th>
                         <th></th>
                     </tr>
                 </thead>
@@ -257,6 +263,7 @@
                         <th class="num" data-sort="profit">Profit / batch</th>
                         <th class="num mob-hide" data-sort="profitPerFlip">Profit / flip</th>
                         <th class="num" data-sort="dailyVolume">Daily vol</th>
+                        <th class="star-col"></th>
                     </tr>
                 </thead>
                 <tbody id="decant-tbody"></tbody>
@@ -301,8 +308,9 @@
                         <th class="num mob-hide" data-sort="sellGross">Sell repaired</th>
                         <th class="num mob-hide" data-sort="tax">GE tax</th>
                         <th class="num" data-sort="profit">Profit / item</th>
-                        <th class="num mob-hide" data-sort="profitPerHour">Profit / hr</th>
+                        <th class="num mob-hide" data-sort="profitPerHour">Profit / flip</th>
                         <th class="num" data-sort="dailyVolume">Daily vol</th>
+                        <th class="star-col"></th>
                     </tr>
                 </thead>
                 <tbody id="repair-tbody"></tbody>
@@ -311,6 +319,17 @@
         </div>
     </div>
     <!-- /REPAIR TAB -->
+
+    <!-- FAVORITES TAB -->
+    <div id="favorites-tab" style="display:none;">
+        <div id="favorites-empty" class="fav-empty" style="display:none;">
+            <div class="fav-empty-icon">⭐</div>
+            <div class="fav-empty-title">No favorites yet</div>
+            <div class="fav-empty-sub">Hit the ☆ on any flip, drop, potion, or Barrows piece<br>to pin it here with live stats.</div>
+        </div>
+        <div class="fav-grid" id="favorites-grid"></div>
+    </div>
+    <!-- /FAVORITES TAB -->
 
     <!-- Import trades modal -->
     <div class="modal-backdrop" id="import-backdrop">
@@ -381,12 +400,19 @@
                     <div class="modal-stat"><div class="modal-stat-label">Buy</div><div class="modal-stat-value" id="modal-buy">—</div></div>
                     <div class="modal-stat"><div class="modal-stat-label">Sell (gross)</div><div class="modal-stat-value" id="modal-sell">—</div></div>
                     <div class="modal-stat"><div class="modal-stat-label">Profit /item (after tax)</div><div class="modal-stat-value" id="modal-profit">—</div></div>
-                    <div class="modal-stat"><div class="modal-stat-label">Profit /hour</div><div class="modal-stat-value" id="modal-pph">—</div></div>
+                    <div class="modal-stat"><div class="modal-stat-label">Profit /flip</div><div class="modal-stat-value" id="modal-pph">—</div></div>
                     <div class="modal-stat">
                         <div class="modal-stat-label">Daily volume</div>
                         <div class="modal-stat-value" id="modal-daily-vol">—</div>
                         <div class="modal-stat-sub" id="modal-vol-breakdown"></div>
                     </div>
+                </div>
+                <div class="modal-flip-row">
+                    <button id="modal-flip-btn" class="flip-order-btn" title="Record that you placed this trade">
+                        <span class="flip-btn-icon">📦</span>
+                        <span class="flip-btn-label">Placed order</span>
+                        <span class="flip-btn-count" id="modal-flip-count" style="display:none;"></span>
+                    </button>
                 </div>
                 <div class="chart-controls-row">
                     <div class="range-buttons" id="range-buttons">
@@ -539,6 +565,7 @@
 <!-- JS modules loaded in dependency order -->
 <script src="js/config.js" onerror="/* local dev — no config.js, using defaults */"></script>
 <script src="js/constants.js"></script>
+<script src="js/gate.js"></script>
 <script src="js/img-loader.js"></script>
 <script src="js/cache.js"></script>
 <script src="js/state.js"></script>
@@ -555,6 +582,7 @@
 <script src="js/chart.js"></script>
 <script src="js/decant-modal.js"></script>
 <script src="js/repair-modal.js"></script>
+<script src="js/favorites.js"></script>
 <script src="js/views.js"></script>
 <script src="js/import.js"></script>
 <script src="js/tabs.js"></script>

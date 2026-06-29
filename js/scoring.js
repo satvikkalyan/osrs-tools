@@ -80,8 +80,10 @@ function computeFlips(mapping, latest, hourly, daily) {
             dailyMin,
             ageMin,
             lopsided,
-            profitPerHour: adjustedProfit,
+            profitPerHour:    adjustedProfit,
             profitPerHourRaw: profitPerHour,
+            // Profit from buying the full 4h limit in one cycle (no liquidity cap)
+            profitPerFlip:    netMargin * buyLimit,
         });
     }
     return out;

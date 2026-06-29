@@ -3,7 +3,7 @@
 const state = {
     items: [],        // profitable items only — used for flips table + drop detection
     searchItems: [],  // ALL items with price data — used for global search
-    sortBy: 'profitPerHour',
+    sortBy: 'profitPerFlip',
     sortDir: 'desc',
     fetchedAt: null,
     page: 1,

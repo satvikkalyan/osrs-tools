@@ -1,42 +1,58 @@
--- OSRS Flip Finder — Supabase setup for global view tracking
+-- OSRS Flip Finder — Supabase setup for global view + flip tracking
 -- Run this entire block in your Supabase project's SQL Editor (supabase.com → project → SQL Editor)
+-- If you already ran a previous version, the ALTER TABLE line below will add the flip_count column.
 
--- 1. Table to store per-item view counts
+-- 1. Table to store per-item view + flip counts
 create table if not exists item_views (
     item_id     integer primary key,
     name        text    not null,
     icon        text    default '',
-    view_count  integer not null default 0
+    view_count  integer not null default 0,
+    flip_count  integer not null default 0
 );
 
--- 2. Atomic upsert function — safe under concurrent writes
---    Called by the app every time a user opens an item chart.
+-- Add flip_count column if this table already exists from a previous setup
+alter table item_views add column if not exists flip_count integer not null default 0;
+
+-- 2. Atomic view upsert — called every time a user opens an item chart
 create or replace function increment_view(p_item_id integer, p_name text, p_icon text)
 returns void
 language sql
-security definer   -- runs with table-owner rights, bypasses RLS for writes
+security definer
 as $$
-    insert into item_views (item_id, name, icon, view_count)
-    values (p_item_id, p_name, p_icon, 1)
+    insert into item_views (item_id, name, icon, view_count, flip_count)
+    values (p_item_id, p_name, p_icon, 1, 0)
     on conflict (item_id) do update
         set view_count = item_views.view_count + 1,
             name       = excluded.name,
             icon       = excluded.icon;
 $$;
 
--- 3. Row-level security: allow anonymous users to READ the table
---    (they call increment_view to write, which runs as security definer)
+-- 3. Atomic flip upsert — called when user clicks "Placed order" in the chart modal
+create or replace function increment_flip(p_item_id integer, p_name text, p_icon text)
+returns void
+language sql
+security definer
+as $$
+    insert into item_views (item_id, name, icon, view_count, flip_count)
+    values (p_item_id, p_name, p_icon, 0, 1)
+    on conflict (item_id) do update
+        set flip_count = item_views.flip_count + 1,
+            name       = excluded.name,
+            icon       = excluded.icon;
+$$;
+
+-- 4. Row-level security: anonymous users can READ
 alter table item_views enable row level security;
 
-create policy "public_read"
+create policy if not exists "public_read"
     on item_views
     for select
     to anon
     using (true);
 
--- 4. Grant execute on the function to anonymous (unauthenticated) users
+-- 5. Grant execute on both functions to anonymous users
 grant execute on function increment_view(integer, text, text) to anon;
+grant execute on function increment_flip(integer, text, text) to anon;
 
--- Done! Now go to Settings → API in your Supabase project and copy:
---   • Project URL  → paste as SUPABASE_URL in js/constants.js
---   • anon / public key → paste as SUPABASE_ANON_KEY in js/constants.js
+-- Done! Trending sidebar now sorts by flip/view ratio (items you actually traded rank first).

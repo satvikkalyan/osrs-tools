@@ -28,7 +28,17 @@ function openChartModal(item) {
     setText('modal-buy', formatGp(item.buy));
     setText('modal-sell', formatGp(item.sell));
     setText('modal-profit', formatGp(item.netMargin));
-    setText('modal-pph', formatGp(item.profitPerHour));
+    setText('modal-pph', item.profitPerFlip ? formatGp(item.profitPerFlip) : (item.buyLimit ? formatGp(item.netMargin * item.buyLimit) : '—'));
+
+    // Update flip button count badge
+    if (typeof getFlipCount === 'function') {
+        const count = getFlipCount(item.id);
+        const countEl = document.getElementById('modal-flip-count');
+        if (countEl) {
+            if (count > 0) { countEl.textContent = `×${count}`; countEl.style.display = 'inline'; }
+            else           { countEl.style.display = 'none'; }
+        }
+    }
     setText('modal-daily-vol', (item.dailyVolume || 0).toLocaleString());
     // Show the recent 1h liquidity under the daily total so the gap
     // between "what's been traded today" and "what's trading right now"
@@ -659,6 +669,26 @@ document.getElementById('calc-fill-limit').addEventListener('click', () => {
     }
 });
 document.getElementById('modal-close').addEventListener('click', closeChartModal);
+
+// "Placed order" button — logs a flip for the currently open item
+document.getElementById('modal-flip-btn')?.addEventListener('click', () => {
+    const item = chartState.item;
+    if (!item) return;
+    if (typeof trackFlip === 'function') trackFlip(item);
+    // Brief visual feedback
+    const btn = document.getElementById('modal-flip-btn');
+    btn.classList.add('flip-logged');
+    const label = btn.querySelector('.flip-btn-label');
+    const orig  = label.textContent;
+    label.textContent = 'Logged!';
+    setTimeout(() => { label.textContent = orig; btn.classList.remove('flip-logged'); }, 1200);
+    // Update count badge
+    if (typeof getFlipCount === 'function') {
+        const count = getFlipCount(item.id);
+        const countEl = document.getElementById('modal-flip-count');
+        if (countEl) { countEl.textContent = `×${count}`; countEl.style.display = 'inline'; }
+    }
+});
 document.getElementById('modal-backdrop').addEventListener('click', (e) => {
     // Click on the dim backdrop closes; clicks inside the dialog don't.
     if (e.target.id === 'modal-backdrop') closeChartModal();
