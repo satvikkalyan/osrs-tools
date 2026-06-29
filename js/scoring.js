@@ -116,19 +116,19 @@ function applyFilters() {
 }
 
 function sortItems(items) {
-    const k = state.sortBy;
-    const dir = state.sortDir === 'asc' ? 1 : -1;
-    const yoursFirst = document.getElementById('filter-yours-first') &&
-                       document.getElementById('filter-yours-first').checked;
+    const keys = state.sortKeys?.length ? state.sortKeys : [{ key: state.sortBy, dir: state.sortDir }];
+    const yoursFirst = document.getElementById('filter-yours-first')?.checked;
     return items.slice().sort((a, b) => {
-        // Pin personal-watchlist items above everything else when toggled.
         if (yoursFirst) {
             const aMine = isPinnableYours(a.id) ? 1 : 0;
             const bMine = isPinnableYours(b.id) ? 1 : 0;
             if (aMine !== bMine) return bMine - aMine;
         }
-        const av = a[k], bv = b[k];
-        if (typeof av === 'string') return dir * av.localeCompare(bv);
-        return dir * ((av || 0) - (bv || 0));
+        for (const { key, dir } of keys) {
+            const av = a[key], bv = b[key];
+            const cmp = typeof av === 'string' ? av.localeCompare(bv) : (av || 0) - (bv || 0);
+            if (cmp !== 0) return dir === 'asc' ? cmp : -cmp;
+        }
+        return 0;
     });
 }

@@ -3,8 +3,9 @@
 const state = {
     items: [],        // profitable items only — used for flips table + drop detection
     searchItems: [],  // ALL items with price data — used for global search
-    sortBy: 'profitPerFlip',
+    sortBy: 'profitPerFlip',   // kept for backward compat (always mirrors sortKeys[0])
     sortDir: 'desc',
+    sortKeys: [{ key: 'profitPerFlip', dir: 'desc' }], // ordered list of active sorts
     fetchedAt: null,
     page: 1,
     pageSize: 50,

@@ -18,13 +18,12 @@ const VIEWS_CACHE_TTL_MS = 3 * 60 * 1000; // bust every 3 min
 // ---------- Supabase helpers ----------
 
 function sbHeaders() {
-    const headers = {
+    return {
+        'apikey':        SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         'Content-Type':  'application/json',
         'Prefer':        'return=minimal',
     };
-    if (SUPABASE_ANON_KEY.startsWith('eyJ')) headers['apikey'] = SUPABASE_ANON_KEY;
-    return headers;
 }
 
 const sbEnabled = () => !!(SUPABASE_URL && SUPABASE_ANON_KEY);
@@ -78,7 +77,7 @@ async function fetchTopViewed(limit = 25) {
         try {
             // Fetch enough rows to filter by vol and then take top N
             const res = await fetch(
-                `${SUPABASE_URL}/rest/v1/item_views?order=view_count.desc&limit=200`,
+                `${SUPABASE_URL}/rest/v1/item_views?order=flip_count.desc,view_count.desc&limit=200`,
                 { headers: { ...sbHeaders(), Prefer: '' } }
             );
             if (!res.ok) throw new Error(`Supabase ${res.status}`);

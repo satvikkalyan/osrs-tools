@@ -45,7 +45,8 @@ $$;
 -- 4. Row-level security: anonymous users can READ
 alter table item_views enable row level security;
 
-create policy if not exists "public_read"
+drop policy if exists "public_read" on item_views;
+create policy "public_read"
     on item_views
     for select
     to anon
