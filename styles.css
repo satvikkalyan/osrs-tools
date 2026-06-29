@@ -26,6 +26,7 @@ html, body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     font-size: 13px;
     line-height: 1.4;
+    overflow-x: hidden;
 }
 .mono { font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
 .container { max-width: 1500px; margin: 0 auto; padding: 20px; padding-top: max(20px, env(safe-area-inset-top)); padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(10px, env(safe-area-inset-right)); }
@@ -222,9 +223,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     background: var(--bg-elev);
     border: 1px solid var(--border);
     border-radius: 6px;
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
 }
-table { width: 100%; border-collapse: collapse; }
+table { width: 100%; border-collapse: collapse; min-width: 700px; }
 thead { background: var(--bg-elev-2); }
 th {
     color: var(--text-dim);
@@ -243,7 +246,28 @@ th:hover { color: var(--text); }
 th.sorted { color: var(--accent); }
 th.sorted::after { content: ''; margin-left: 4px; }
 th.sorted.desc::after { content: ' ↓'; }
-th.sorted.asc::after { content: ' ↑'; }
+th.sorted.asc::after  { content: ' ↑'; }
+
+/* Secondary sort priority badge (shows ②③ etc.) */
+th[data-sort-priority]:not([data-sort-priority=""])::before {
+    content: attr(data-sort-priority);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    background: var(--accent);
+    color: #1a1a1a;
+    border-radius: 50%;
+    font-size: 9px;
+    font-weight: 800;
+    margin-right: 3px;
+    vertical-align: middle;
+    line-height: 1;
+}
+
+/* Cursor hint that headers are clickable/shift-clickable */
+th[data-sort] { position: relative; cursor: pointer; }
 th.num, td.num { text-align: right; }
 td {
     padding: 8px 12px;
@@ -1460,6 +1484,27 @@ th.star-col, td.star-col {
     .fav-grid { grid-template-columns: 1fr; }
 }
 
+/* ─── Price flash animation ─────────────────────────────────────────────────── */
+@keyframes flash-up {
+    0%   { background: rgba(74, 222, 128, 0.30); }
+    100% { background: transparent; }
+}
+@keyframes flash-down {
+    0%   { background: rgba(248, 113, 113, 0.30); }
+    100% { background: transparent; }
+}
+.flash-up   { animation: flash-up   1s ease-out; }
+.flash-down { animation: flash-down 1s ease-out; }
+
+/* ─── Keyboard-selected row ─────────────────────────────────────────────────── */
+#tbody tr.kb-selected td {
+    background: rgba(96, 165, 250, 0.08);
+}
+#tbody tr.kb-selected {
+    outline: 1px solid rgba(96, 165, 250, 0.35);
+    outline-offset: -1px;
+}
+
 /* ─── Fluid UI — transitions everywhere ───────────────────────────────────── */
 
 /* Smoother button press */
@@ -1555,6 +1600,17 @@ th[data-sort] { transition: color 0.12s; }
     color: var(--green);
 }
 .flip-btn-icon { font-size: 14px; }
+.flip-btn-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+.flip-timer {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+}
 .flip-btn-count {
     background: var(--green-soft);
     color: var(--green);
@@ -1661,4 +1717,52 @@ th[data-sort] { transition: color 0.12s; }
 }
 .gate-box.gate-shake {
     animation: gate-shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* ── Column-header contextual tooltip card ───────────────────────────────── */
+#col-tip-card {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 280px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .5);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.22s ease, transform 0.22s ease;
+    z-index: 1500;
+}
+#col-tip-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.col-tip-icon {
+    font-size: 18px;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+.col-tip-content {
+    flex: 1;
+    min-width: 0;
+}
+.col-tip-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--accent);
+    margin-bottom: 5px;
+}
+.col-tip-body {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    line-height: 1.55;
 }

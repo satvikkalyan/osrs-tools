@@ -408,11 +408,14 @@
                     </div>
                 </div>
                 <div class="modal-flip-row">
-                    <button id="modal-flip-btn" class="flip-order-btn" title="Record that you placed this trade">
-                        <span class="flip-btn-icon">📦</span>
-                        <span class="flip-btn-label">Placed order</span>
-                        <span class="flip-btn-count" id="modal-flip-count" style="display:none;"></span>
-                    </button>
+                    <div class="flip-btn-wrap">
+                        <button id="modal-flip-btn" class="flip-order-btn" title="Record that you placed this trade">
+                            <span class="flip-btn-icon">📦</span>
+                            <span class="flip-btn-label">Placed order</span>
+                            <span class="flip-btn-count" id="modal-flip-count" style="display:none;"></span>
+                        </button>
+                        <div id="modal-flip-timer" class="flip-timer" style="display:none;"></div>
+                    </div>
                 </div>
                 <div class="chart-controls-row">
                     <div class="range-buttons" id="range-buttons">
@@ -587,6 +590,7 @@
 <script src="js/import.js"></script>
 <script src="js/tabs.js"></script>
 <script src="js/search.js"></script>
+<script src="js/tooltips.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>
