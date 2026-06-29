@@ -242,28 +242,24 @@ function renderPriceChart(series) {
     // Populate live price snapshot panel below the chart.
     updateSnapshotPanel(chartState.item);
 
-    // Breakeven sell line: minimum sell price to cover GE tax if you buy at
-    // the last visible data point's avgLowPrice. Anchoring to the last chart
-    // point (not currentItem.buy) keeps the line inside the visible Y range
-    // even when live prices diverge from historical averages.
-    const xFirst = series.length ? series[0].timestamp * 1000 : Date.now();
-    const xLast = series.length ? series[series.length - 1].timestamp * 1000 : Date.now();
+    // Breakeven sell line: for each historical buy price point, compute the
+    // minimum sell price needed to cover GE tax and break even.
+    // This gives a dynamic line that tracks alongside the buy line rather than
+    // a flat horizontal — visually shows how the breakeven threshold shifts
+    // as the buy price moves throughout the window.
     const currentItem = chartState.item;
-    const lastBuy = series.length ? series[series.length - 1].avgLowPrice : null;
-    let breakevenPrice = null;
-    if (currentItem && lastBuy) {
-        if (currentItem.taxExempt || lastBuy < GE_TAX_MIN_PRICE) {
-            breakevenPrice = lastBuy;
-        } else {
-            const approxTax = lastBuy * GE_TAX_RATE;
-            breakevenPrice = approxTax >= GE_TAX_CAP
-                ? lastBuy + GE_TAX_CAP
-                : Math.ceil(lastBuy / (1 - GE_TAX_RATE)); // exact: sell × 0.98 = buy → sell = buy / 0.98
+    const breakevenPoints = series.map(p => {
+        const buy = p.avgLowPrice;
+        if (!buy || buy <= 0) return { x: p.timestamp * 1000, y: null };
+        if (!currentItem || currentItem.taxExempt || buy < GE_TAX_MIN_PRICE) {
+            return { x: p.timestamp * 1000, y: buy }; // no tax → breakeven = buy
         }
-    }
-    const breakevenLine = breakevenPrice != null
-        ? [{ x: xFirst, y: breakevenPrice }, { x: xLast, y: breakevenPrice }]
-        : [];
+        const approxTax = buy * GE_TAX_RATE;
+        const be = approxTax >= GE_TAX_CAP
+            ? buy + GE_TAX_CAP
+            : Math.ceil(buy / (1 - GE_TAX_RATE));
+        return { x: p.timestamp * 1000, y: be };
+    });
 
     const opts = chartOptions({ valueAxis: true });
     // Extra right-side padding so the tooltip for the last (rightmost) point
@@ -306,13 +302,17 @@ function renderPriceChart(series) {
                 },
                 {
                     label: 'Breakeven sell',
-                    data: breakevenLine,
+                    data: breakevenPoints,
                     borderColor: '#fb923c',
-                    borderDash: [4, 4],
+                    backgroundColor: 'rgba(251, 146, 60, 0.06)',
                     borderWidth: 1.5,
-                    pointRadius: 0,
-                    fill: false,
+                    borderDash: [5, 3],
+                    stepped: 'after',
                     tension: 0,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    fill: false,
+                    spanGaps: true,
                     order: -1,
                 },
             ],
