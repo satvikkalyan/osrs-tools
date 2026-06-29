@@ -71,53 +71,79 @@ function getFlipCount(itemId) {
 
 async function fetchTopViewed(limit = 25) {
     const now = Date.now();
-    if (viewsCache && (now - viewsCacheTs) < VIEWS_CACHE_TTL_MS) return viewsCache;
+    if (viewsCache && (now - viewsCacheTs) < VIEWS_CACHE_TTL_MS) {
+        console.log('[trending] serving from cache:', viewsCache.length, 'items');
+        return viewsCache;
+    }
 
     if (sbEnabled()) {
+        console.log('[trending] fetching from Supabase…');
         try {
-            // Fetch enough rows to filter by vol and then take top N
             const res = await fetch(
                 `${SUPABASE_URL}/rest/v1/item_views?order=flip_count.desc,view_count.desc&limit=200`,
                 { headers: { ...sbHeaders(), Prefer: '' } }
             );
             if (!res.ok) throw new Error(`Supabase ${res.status}`);
             const rows = await res.json();
+            console.log('[trending] Supabase returned', rows.length, 'rows');
             viewsCache   = trendingSort(rows, limit);
             viewsCacheTs = now;
+            console.log('[trending] after sort+filter:', viewsCache.length, 'items shown');
             return viewsCache;
         } catch (e) {
             console.warn('[trending] Supabase fetch failed, using local fallback:', e.message);
         }
+    } else {
+        console.log('[trending] Supabase not configured, using local fallback');
     }
 
-    return localTopViewed(limit);
+    const local = localTopViewed(limit);
+    console.log('[trending] local fallback returned', local.length, 'items');
+    return local;
 }
 
 // Sort rows by: flip/view ratio desc (items with flips first), then view_count desc.
 // Also enforces MIN_DAILY_VOL by cross-referencing local item state.
 function trendingSort(rows, limit) {
-    const allItems = [...(state.items || []), ...(state.searchItems || [])];
-    const volById  = new Map(allItems.map(x => [x.id, x.dailyVolume || 0]));
+    // Build vol map — state.items entries override searchItems since they have
+    // properly computed dailyVolume; searchItems now also carry real volume
+    // (fixed in buildSearchItems) so this fallback is reliable.
+    const volMap = new Map();
+    for (const x of (state.searchItems || [])) volMap.set(x.id, x.dailyVolume || 0);
+    for (const x of (state.items || []))       volMap.set(x.id, x.dailyVolume || 0);
 
-    return rows
-        .filter(r => (volById.get(r.item_id) || 0) >= MIN_DAILY_VOL)
+    console.log('[trending] trendingSort: rows in=', rows.length,
+        '| volMap size=', volMap.size,
+        '| MIN_DAILY_VOL=', MIN_DAILY_VOL);
+
+    const afterVolFilter = rows.filter(r => {
+        const vol = volMap.get(r.item_id) || 0;
+        return vol >= MIN_DAILY_VOL;
+    });
+    console.log('[trending] after vol filter:', afterVolFilter.length, 'rows pass',
+        `(${rows.length - afterVolFilter.length} filtered out — vol < ${MIN_DAILY_VOL})`);
+
+    // Sample a few filtered-out rows to show why they failed
+    rows.filter(r => (volMap.get(r.item_id) || 0) < MIN_DAILY_VOL).slice(0, 3).forEach(r => {
+        console.log(`[trending]   filtered: ${r.name} (id=${r.item_id}) vol=${volMap.get(r.item_id) || 0}`);
+    });
+
+    return afterVolFilter
         .map(r => ({
             ...r,
             flip_count: r.flip_count || 0,
             ratio: r.view_count > 0 ? (r.flip_count || 0) / r.view_count : 0,
         }))
         .sort((a, b) => {
-            // Items with at least one flip rank above zero-flip items
             const aHasFlips = a.flip_count > 0;
             const bHasFlips = b.flip_count > 0;
             if (aHasFlips !== bHasFlips) return bHasFlips - aHasFlips;
-            // Among items with flips: sort by ratio desc
             if (aHasFlips && bHasFlips && a.ratio !== b.ratio) return b.ratio - a.ratio;
-            // Fall back to raw view count
             return b.view_count - a.view_count;
         })
         .slice(0, limit);
 }
+
 
 function localTopViewed(limit = 25) {
     const views = JSON.parse(localStorage.getItem(VIEWS_LOCAL_KEY) || '{}');

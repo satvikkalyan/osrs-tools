@@ -69,6 +69,10 @@ function buildSearchItems(mapping, latest) {
     for (const item of mapping) {
         const p = latest[item.id];
         if (!p || (!p.high && !p.low)) continue;
+        // Include real daily volume so trending sidebar can filter by MIN_DAILY_VOL
+        // (previously always 0, causing all searchItems entries to be filtered out)
+        const d = apiCache.daily?.[item.id] || {};
+        const dailyVolume = (d.highPriceVolume || 0) + (d.lowPriceVolume || 0);
         out.push({
             id: item.id,
             name: item.name,
@@ -78,7 +82,7 @@ function buildSearchItems(mapping, latest) {
             sell: p.high || 0,
             buyLimit: item.limit || 0,
             taxExempt: TAX_EXEMPT_IDS.has(item.id),
-            dailyVolume: 0,
+            dailyVolume,
             volume: 0,
             netMargin: 0,
             profitPerHour: 0,

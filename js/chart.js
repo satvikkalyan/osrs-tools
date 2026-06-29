@@ -262,9 +262,19 @@ function renderPriceChart(series) {
     });
 
     const opts = chartOptions({ valueAxis: true });
-    // Extra right-side padding so the tooltip for the last (rightmost) point
-    // has room to render without being clipped by the canvas edge.
-    opts.layout = { padding: { right: 24 } };
+    opts.layout = { padding: { right: 8 } };
+
+    // Extend the x-axis by 5% of the visible range so the latest data point
+    // isn't cramped at the very right edge. No fake data points are added —
+    // we only push out the axis max so the lines breathe on the right.
+    if (series.length >= 2) {
+        const xFirst = series[0].timestamp * 1000;
+        const xLast  = series[series.length - 1].timestamp * 1000;
+        const buffer = (xLast - xFirst) * 0.05;
+        opts.scales = opts.scales || {};
+        opts.scales.x = opts.scales.x || {};
+        opts.scales.x.max = xLast + buffer;
+    }
 
     chartState.priceChart = new Chart(canvas, {
         type: 'line',
