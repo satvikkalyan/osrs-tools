@@ -260,6 +260,7 @@ function renderDropsTab() {
     const sortedDrops = applySortArr(visible, dropsSort.by, dropsSort.dir);
     syncSortHeaders(wrap.querySelector('table'), dropsSort);
     tbody.innerHTML = sortedDrops.map(dropRowHtml).join('');
+    imgLoader.observe(tbody);
     tbody.querySelectorAll('tr').forEach(tr => {
         const id = parseInt(tr.dataset.itemId, 10);
         tr.addEventListener('click', e => {
@@ -286,7 +287,7 @@ function renderDropsTab() {
 function dropRowHtml(drop) {
     const iconUrl = drop.icon ? getIconSrc(drop.icon) : '';
     const icon = iconUrl
-        ? `<img class="drop-icon" src="${iconUrl}" alt="" loading="lazy" onerror="this.style.display='none'">`
+        ? `<img class="drop-icon" data-src="${iconUrl}" src="" alt="" onerror="this.style.display='none'">`
         : '';
     const elapsedMs = Date.now() - drop.detectedAt;
     const elapsedMin = Math.floor(elapsedMs / 60000);

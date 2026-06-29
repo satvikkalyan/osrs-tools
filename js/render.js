@@ -45,8 +45,10 @@ function render() {
     }
 
     // Table
-    document.getElementById('tbody').innerHTML = rendered.map((it, i) => rowHtml(it, i)).join('');
-    document.getElementById('tbody').querySelectorAll('tr').forEach(tr => {
+    const tbody = document.getElementById('tbody');
+    tbody.innerHTML = rendered.map((it, i) => rowHtml(it, i)).join('');
+    imgLoader.observe(tbody);
+    tbody.querySelectorAll('tr').forEach(tr => {
         tr.addEventListener('click', () => {
             const id = parseInt(tr.dataset.itemId, 10);
             const item = state.items.find(x => x.id === id);
@@ -101,7 +103,7 @@ function rowHtml(item, idx) {
         ? getIconSrc(item.icon)
         : '';
     const icon = iconUrl
-        ? `<img class="item-icon" src="${iconUrl}" alt="" loading="lazy" onerror="this.outerHTML='<div class=icon-placeholder></div>'">`
+        ? `<img class="item-icon" data-src="${iconUrl}" src="" alt="" onerror="this.outerHTML='<div class=icon-placeholder></div>'">`
         : '<div class="icon-placeholder"></div>';
     const badges = [];
     badges.push(`<span class="badge ${item.members ? 'badge-mem' : 'badge-f2p'}">${item.members ? 'P2P' : 'F2P'}</span>`);

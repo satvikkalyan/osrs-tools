@@ -135,7 +135,7 @@ async function loadSidebarContent() {
     list.innerHTML = items.map((row, i) => {
         const iconUrl = row.icon ? getIconSrc(row.icon) : '';
         const iconHtml = iconUrl
-            ? `<img class="sidebar-icon" src="${iconUrl}" alt="" loading="lazy" onerror="this.style.display='none'">`
+            ? `<img class="sidebar-icon" data-src="${iconUrl}" src="" alt="" onerror="this.style.display='none'">`
             : '<span class="sidebar-icon-placeholder"></span>';
         return `
         <div class="sidebar-item" data-item-id="${row.item_id}" role="button" tabindex="0">
@@ -146,6 +146,7 @@ async function loadSidebarContent() {
         </div>`;
     }).join('');
 
+    imgLoader.observe(list);
     list.querySelectorAll('.sidebar-item').forEach(el => {
         const open = () => {
             const id   = parseInt(el.dataset.itemId, 10);

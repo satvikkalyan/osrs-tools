@@ -39,7 +39,7 @@ function runGlobalSearch() {
     globalSearchResults.innerHTML = globalSearchMatches.map((it, i) => {
         const iconUrl = it.icon ? getIconSrc(it.icon) : '';
         const icon = iconUrl
-            ? `<img src="${iconUrl}" alt="" onerror="this.style.visibility='hidden'">`
+            ? `<img data-src="${iconUrl}" src="" alt="" onerror="this.style.visibility='hidden'">`
             : '<span style="width:22px;display:inline-block;"></span>';
         return `
             <div class="global-search-row ${i === 0 ? 'active' : ''}" data-idx="${i}">
@@ -50,6 +50,7 @@ function runGlobalSearch() {
         `;
     }).join('');
     globalSearchResults.classList.add('open');
+    imgLoader.observe(globalSearchResults);
 
     globalSearchResults.querySelectorAll('.global-search-row').forEach(row => {
         row.addEventListener('mousedown', e => {
