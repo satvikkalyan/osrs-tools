@@ -111,22 +111,23 @@ function renderPriceChart(series) {
     const suggestion = computeSuggestions(series);
     updateSuggestionPanel(suggestion);
 
-    // Breakeven sell line: minimum sell price to cover GE tax on a buy at the
-    // current buy price. Approximated as buy × 1.02 (exact is buy / 0.98 ≈
-    // buy × 1.0204 — visually indistinguishable). Same exemption / cap logic
-    // as computeFlips.
+    // Breakeven sell line: minimum sell price to cover GE tax if you buy at
+    // the last visible data point's avgLowPrice. Anchoring to the last chart
+    // point (not currentItem.buy) keeps the line inside the visible Y range
+    // even when live prices diverge from historical averages.
     const xFirst = series.length ? series[0].timestamp * 1000 : Date.now();
     const xLast = series.length ? series[series.length - 1].timestamp * 1000 : Date.now();
     const currentItem = chartState.item;
+    const lastBuy = series.length ? series[series.length - 1].avgLowPrice : null;
     let breakevenPrice = null;
-    if (currentItem) {
-        if (currentItem.taxExempt || currentItem.buy < GE_TAX_MIN_PRICE) {
-            breakevenPrice = currentItem.buy; // no tax = no markup needed
+    if (currentItem && lastBuy) {
+        if (currentItem.taxExempt || lastBuy < GE_TAX_MIN_PRICE) {
+            breakevenPrice = lastBuy;
         } else {
-            const approxTax = currentItem.buy * GE_TAX_RATE;
+            const approxTax = lastBuy * GE_TAX_RATE;
             breakevenPrice = approxTax >= GE_TAX_CAP
-                ? currentItem.buy + GE_TAX_CAP
-                : Math.ceil(currentItem.buy * (1 + GE_TAX_RATE));
+                ? lastBuy + GE_TAX_CAP
+                : Math.ceil(lastBuy / (1 - GE_TAX_RATE)); // exact: sell × 0.98 = buy → sell = buy / 0.98
         }
     }
     const breakevenLine = breakevenPrice != null

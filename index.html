@@ -49,6 +49,7 @@
             <span>Drops</span>
             <span class="tab-badge" id="drops-badge" style="display:none;">0</span>
         </button>
+        <button class="tab" data-tab="decant">Decant</button>
     </div>
 
     <!-- FLIPS TAB -->
@@ -209,6 +210,48 @@
     </div>
     <!-- /DROPS TAB -->
 
+    <!-- DECANT TAB -->
+    <div id="decant-tab" style="display:none;">
+        <div class="drops-controls">
+            <div class="drops-controls-left">
+                <div class="control">
+                    <label>Direction</label>
+                    <select id="decant-direction">
+                        <option value="3→4" selected>3→4 (buy 3-dose, sell 4-dose)</option>
+                        <option value="4→3">4→3 (buy 4-dose, sell 3-dose)</option>
+                        <option value="both">Both directions</option>
+                    </select>
+                </div>
+                <div class="control">
+                    <label>Min profit / batch (gp)</label>
+                    <input type="number" id="decant-min-profit" value="0" min="0" class="mono">
+                </div>
+            </div>
+            <div class="drops-controls-right">
+                <button class="btn-refresh-drops primary" id="decant-refresh">↻ Refresh</button>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Potion</th>
+                        <th class="num">Direction</th>
+                        <th class="num">Buy (each)</th>
+                        <th class="num">Sell (each)</th>
+                        <th class="num">Batch cost</th>
+                        <th class="num">Batch revenue</th>
+                        <th class="num">Profit / batch</th>
+                        <th class="num">Profit / hr</th>
+                    </tr>
+                </thead>
+                <tbody id="decant-tbody"></tbody>
+            </table>
+            <div id="decant-empty" class="empty" style="padding:30px;display:none;">No decanting opportunities found. Try adjusting filters or refreshing.</div>
+        </div>
+    </div>
+    <!-- /DECANT TAB -->
+
     <!-- Import trades modal -->
     <div class="modal-backdrop" id="import-backdrop">
         <div class="modal" role="dialog" aria-modal="true" style="max-width:720px;">
@@ -293,33 +336,33 @@
                         <button class="range-btn" data-step="6h" data-label="30d">30d</button>
                         <button class="range-btn" data-step="24h" data-label="90d">90d</button>
                     </div>
-                    <label class="sr-toggle" title="Use detected support / resistance levels instead of percentile-based suggestions.">
-                        <input type="checkbox" id="sr-mode">
-                        <span>Use support/resistance</span>
-                    </label>
                 </div>
                 <div class="chart-wrap">
                     <canvas id="price-chart"></canvas>
                     <div class="chart-loading" id="chart-loading">Loading price history…</div>
                 </div>
-                <div class="suggested-row" id="suggested-row" style="display:none;">
+                <div class="suggested-row" id="snapshot-row">
                     <div class="suggested-card buy">
-                        <div class="suggested-label">Suggested buy</div>
-                        <div class="suggested-value" id="suggested-buy">—</div>
-                        <div class="suggested-hint" id="suggested-buy-hint">—</div>
+                        <div class="suggested-label">Latest buy</div>
+                        <div class="suggested-value" id="snap-buy">—</div>
+                        <div class="suggested-hint">current low price</div>
                     </div>
                     <div class="suggested-card sell">
-                        <div class="suggested-label">Suggested sell</div>
-                        <div class="suggested-value" id="suggested-sell">—</div>
-                        <div class="suggested-hint" id="suggested-sell-hint">—</div>
+                        <div class="suggested-label">Latest sell</div>
+                        <div class="suggested-value" id="snap-sell">—</div>
+                        <div class="suggested-hint">current high price</div>
+                    </div>
+                    <div class="suggested-card" style="border-left-color:var(--accent);">
+                        <div class="suggested-label">Breakeven sell</div>
+                        <div class="suggested-value" id="snap-breakeven">—</div>
+                        <div class="suggested-hint">min sell to cover GE tax</div>
                     </div>
                     <div class="suggested-card profit">
-                        <div class="suggested-label">Net margin (after tax)</div>
-                        <div class="suggested-value" id="suggested-margin">—</div>
-                        <div class="suggested-hint" id="suggested-margin-hint">—</div>
+                        <div class="suggested-label">Profit / item</div>
+                        <div class="suggested-value" id="snap-profit">—</div>
+                        <div class="suggested-hint">after 2% GE tax</div>
                     </div>
                 </div>
-                <div id="suggested-warning" class="suggested-warning" style="display:none;"></div>
                 <div class="calc" id="calc">
                     <div class="calc-header">
                         <span class="calc-title">Profit calculator</span>
