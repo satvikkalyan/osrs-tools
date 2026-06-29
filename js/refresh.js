@@ -29,6 +29,9 @@ function updateCountdownLabel() {
     const enabled = document.getElementById('auto-refresh').checked;
     if (!el) return;
     el.textContent = enabled ? `${autoRefreshSecondsLeft}s` : '';
+    // Mirror countdown in the fixed footer
+    const ffEl = document.getElementById('ff-countdown');
+    if (ffEl) ffEl.textContent = enabled ? `↻ ${autoRefreshSecondsLeft}s` : '';
 }
 
 function tickAutoRefresh() {

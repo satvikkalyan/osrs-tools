@@ -44,10 +44,48 @@ function render() {
         setText('meta', `Updated ${when} · live OSRS Wiki prices`);
     }
 
-    // Table
+    // Table — snapshot old prices before blowing away the DOM
     const tbody = document.getElementById('tbody');
+    const oldPrices = new Map();
+    tbody.querySelectorAll('tr[data-item-id]').forEach(tr => {
+        oldPrices.set(+tr.dataset.itemId, {
+            buy:          +tr.dataset.buy,
+            sell:         +tr.dataset.sell,
+            netMargin:    +tr.dataset.margin,
+            profitPerFlip:+tr.dataset.flip,
+        });
+    });
+
     tbody.innerHTML = rendered.map((it, i) => rowHtml(it, i)).join('');
     imgLoader.observe(tbody);
+
+    // Flash cells whose values changed since the last render
+    if (oldPrices.size) {
+        tbody.querySelectorAll('tr[data-item-id]').forEach(tr => {
+            const id  = +tr.dataset.itemId;
+            const old = oldPrices.get(id);
+            if (!old) return;
+            const cur = {
+                buy:           +tr.dataset.buy,
+                sell:          +tr.dataset.sell,
+                netMargin:     +tr.dataset.margin,
+                profitPerFlip: +tr.dataset.flip,
+            };
+            const flash = (sel, ov, nv) => {
+                if (ov === nv) return;
+                const el = tr.querySelector(sel);
+                if (!el) return;
+                el.classList.remove('flash-up', 'flash-down');
+                void el.offsetWidth; // reflow to restart animation
+                el.classList.add(nv > ov ? 'flash-up' : 'flash-down');
+            };
+            flash('[data-field="buy"]',   old.buy,           cur.buy);
+            flash('[data-field="sell"]',  old.sell,          cur.sell);
+            flash('[data-field="margin"]',old.netMargin,     cur.netMargin);
+            flash('[data-field="flip"]',  old.profitPerFlip, cur.profitPerFlip);
+        });
+    }
+
     tbody.querySelectorAll('tr').forEach(tr => {
         tr.addEventListener('click', () => {
             const id = parseInt(tr.dataset.itemId, 10);
@@ -56,6 +94,14 @@ function render() {
         });
     });
     setText('row-status', `${filtered.length.toLocaleString()} items · page ${state.page} of ${totalPages}`);
+
+    // Update fixed footer stats
+    const ffCount = document.getElementById('ff-count');
+    if (ffCount) ffCount.textContent = `${filtered.length.toLocaleString()} profitable flips`;
+    if (state.fetchedAt) {
+        const ffTime = document.getElementById('ff-time');
+        if (ffTime) ffTime.textContent = `updated ${new Date(state.fetchedAt).toLocaleTimeString()}`;
+    }
 
     // Pagination controls
     const paginationEl = document.getElementById('pagination');
@@ -86,12 +132,20 @@ function render() {
         yoursNotice.style.display = (yoursOn && personalWatchlist.size === 0) ? 'block' : 'none';
     }
 
-    // Sort header state
+    // Sort header state — show direction arrow + priority badge for multi-sort
     document.querySelectorAll('th[data-sort]').forEach(th => {
-        const isSorted = th.dataset.sort === state.sortBy;
-        th.classList.toggle('sorted', isSorted);
-        th.classList.toggle('asc', isSorted && state.sortDir === 'asc');
-        th.classList.toggle('desc', isSorted && state.sortDir === 'desc');
+        const k   = th.dataset.sort;
+        const idx = state.sortKeys.findIndex(s => s.key === k);
+        const hit = idx >= 0 ? state.sortKeys[idx] : null;
+        th.classList.toggle('sorted', !!hit);
+        th.classList.toggle('asc',  !!(hit && hit.dir === 'asc'));
+        th.classList.toggle('desc', !!(hit && hit.dir === 'desc'));
+        // Badge: only show number for secondary sorts (idx > 0)
+        th.dataset.sortPriority = idx > 0 ? String(idx + 1) : '';
+        // Tooltip hint
+        if (idx === 0) th.title = 'Shift+click another column to add a secondary sort';
+        else if (idx > 0) th.title = `Secondary sort #${idx + 1} — click to make primary, shift+click to toggle direction`;
+        else th.title = 'Click to sort · Shift+click to add as secondary sort';
     });
 }
 
@@ -126,7 +180,7 @@ function rowHtml(item, idx) {
     const ageClass = isVeryStale ? 'neg' : isStale ? 'dim' : '';
 
     return `
-        <tr data-item-id="${item.id}">
+        <tr data-item-id="${item.id}" data-buy="${item.buy}" data-sell="${item.sell}" data-margin="${item.netMargin}" data-flip="${item.profitPerFlip || 0}">
             <td>
                 <div class="item-cell">
                     ${icon}
@@ -136,15 +190,15 @@ function rowHtml(item, idx) {
                     </div>
                 </div>
             </td>
-            <td class="num mono">${formatGp(item.buy)}</td>
-            <td class="num mono mob-hide">${formatGp(item.sell)}</td>
+            <td class="num mono" data-field="buy">${formatGp(item.buy)}</td>
+            <td class="num mono mob-hide" data-field="sell">${formatGp(item.sell)}</td>
             <td class="num mono neg mob-hide">${item.tax ? '−' + formatGp(item.tax) : '<span class="dim">—</span>'}</td>
-            <td class="num mono pos">${formatGp(item.netMargin)}</td>
+            <td class="num mono pos" data-field="margin">${formatGp(item.netMargin)}</td>
             <td class="num mono mob-hide ${marginPctClass}">${item.marginPct.toFixed(1)}%</td>
             <td class="num mono ${volClass(item.dailyVolume)}" title="Daily total: ${item.dailyVolume.toLocaleString()}  ·  1h: ${item.volume.toLocaleString()} (min of buy/sell)">${item.dailyVolume.toLocaleString()}</td>
             <td class="num mono mob-hide">${item.buyLimit ? item.buyLimit.toLocaleString() : '<span class="dim">—</span>'}</td>
             <td class="num mono mob-hide ${ageClass}">${ageDisplay}</td>
-            <td class="num mono profit-cell">${item.profitPerFlip ? formatGp(item.profitPerFlip) : '<span class="dim">—</span>'}</td>
+            <td class="num mono profit-cell" data-field="flip">${item.profitPerFlip ? formatGp(item.profitPerFlip) : '<span class="dim">—</span>'}</td>
             ${starTd('flips', item.id)}
         </tr>
     `;

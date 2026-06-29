@@ -1163,9 +1163,69 @@ footer.legal {
     font-size: 0.75rem;
     line-height: 1.6;
     text-align: center;
+    /* Leave room for the fixed footer bar */
+    margin-bottom: 44px;
 }
 footer.legal a { color: var(--text-dim); text-decoration: underline; }
 footer.legal a:hover { color: var(--text); }
+
+/* ── Fixed status footer bar ─────────────────────────────────────────────── */
+#fixed-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 20px;
+    background: var(--bg-elev);
+    border-top: 1px solid var(--border);
+    font-size: 11.5px;
+    color: var(--text-dim);
+    z-index: 900;
+    /* Nudge left when the sidebar is open (mirrors .main-content shift) */
+}
+.ff-brand {
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.2px;
+}
+.ff-sep {
+    color: var(--border);
+    margin: 0 2px;
+}
+.ff-credit {
+    color: var(--text-dim);
+    text-decoration: none;
+}
+.ff-credit:hover { color: var(--text); }
+.ff-left  { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.ff-center {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+.ff-right { flex-shrink: 0; }
+.ff-stat  { color: var(--text-dim); }
+.ff-countdown {
+    font-variant-numeric: tabular-nums;
+    color: var(--text-dim);
+    opacity: 0.7;
+    min-width: 28px;
+    text-align: right;
+    display: block;
+}
+/* On very small screens collapse the center section */
+@media (max-width: 480px) {
+    .ff-center { display: none; }
+    .ff-credit { display: none; }
+}
 
 /* ═══════════════════════════════════════════════════════════
    RESPONSIVE / MOBILE  (≤ 768px)

@@ -8,6 +8,57 @@ const chartState = {
     volumeChart: null,
 };
 
+// ---------- Flip timer ----------
+const FLIP_TIMES_KEY = 'osrs-flip-times';
+let flipTimerInterval = null;
+
+function getLastFlipTime(itemId) {
+    try {
+        const times = JSON.parse(localStorage.getItem(FLIP_TIMES_KEY) || '{}');
+        return times[String(itemId)] || null;
+    } catch (_) { return null; }
+}
+
+function saveFlipTime(itemId) {
+    try {
+        const times = JSON.parse(localStorage.getItem(FLIP_TIMES_KEY) || '{}');
+        times[String(itemId)] = Date.now();
+        localStorage.setItem(FLIP_TIMES_KEY, JSON.stringify(times));
+    } catch (_) {}
+}
+
+function flipAgoText(ts) {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60)  return 'last order just now';
+    const m = Math.floor(s / 60);
+    if (m < 60)  return `last order ${m}m ago`;
+    const h = Math.floor(m / 60);
+    const rm = m % 60;
+    return `last order ${h}h ${rm > 0 ? rm + 'm ' : ''}ago`;
+}
+
+function startFlipTimer(itemId) {
+    clearInterval(flipTimerInterval);
+    const timerEl = document.getElementById('modal-flip-timer');
+    if (!timerEl) return;
+
+    function tick() {
+        const ts = getLastFlipTime(itemId);
+        if (!ts) { timerEl.style.display = 'none'; return; }
+        timerEl.textContent = flipAgoText(ts);
+        timerEl.style.display = 'block';
+    }
+    tick();
+    flipTimerInterval = setInterval(tick, 15_000);
+}
+
+function stopFlipTimer() {
+    clearInterval(flipTimerInterval);
+    flipTimerInterval = null;
+    const timerEl = document.getElementById('modal-flip-timer');
+    if (timerEl) timerEl.style.display = 'none';
+}
+
 function openChartModal(item) {
     chartState.item = item;
     // Track view for the trending sidebar (views.js wires this up)
@@ -53,10 +104,13 @@ function openChartModal(item) {
     chartState.timestep = '5m';
     chartState.rangeLabel = '6h';
 
-    // Pre-fill the calculator quantity with the item's 4h buy limit (or a
-    // sane default if there's no published limit).
+    // Pre-fill the calculator with the item's 4h buy limit and compute immediately
+    // using live prices — the chart-derived suggestion prices update it again once loaded.
+    lastSuggestion = null;
     document.getElementById('calc-qty').value = item.buyLimit || 100;
+    updateProfitCalculator();
 
+    startFlipTimer(item.id);
     loadChart();
 }
 
@@ -92,11 +146,33 @@ function closeChartModal() {
     if (chartState.priceChart) { chartState.priceChart.destroy(); chartState.priceChart = null; }
     if (chartState.volumeChart) { chartState.volumeChart.destroy(); chartState.volumeChart = null; }
     chartState.item = null;
+    stopFlipTimer();
 }
 
 document.getElementById('modal-refresh').addEventListener('click', () => {
     if (chartState.item) loadChart();
 });
+
+/**
+ * Strip trailing incomplete buckets from a timeseries.
+ *
+ * The OSRS wiki API includes a partial bucket for the current period that
+ * hasn't closed yet. These points have avgLowPrice = 0 / null AND
+ * avgHighPrice = 0 / null. They render as orphan dots on the right edge of
+ * the chart (because pointRadius is still applied even for y=null/0), and
+ * they anchor the breakeven line at 0 instead of the last real price.
+ *
+ * We trim from the tail until we find a point with at least one valid price.
+ */
+function trimTrailingIncomplete(series) {
+    let end = series.length;
+    while (end > 0) {
+        const p = series[end - 1];
+        if ((p.avgLowPrice > 0) || (p.avgHighPrice > 0)) break;
+        end--;
+    }
+    return end < series.length ? series.slice(0, end) : series;
+}
 
 async function loadChart() {
     const item = chartState.item;
@@ -113,8 +189,12 @@ async function loadChart() {
         // we slice the tail to match the user's label.
         const visible = sliceForLabel(series, chartState.rangeLabel, chartState.timestep);
 
-        renderPriceChart(visible);
-        renderVolumeChart(visible);
+        // Remove trailing null/zero-price buckets so the chart's latest dot
+        // and breakeven line both anchor to the last VALID price point.
+        const trimmed = trimTrailingIncomplete(visible);
+
+        renderPriceChart(trimmed);
+        renderVolumeChart(trimmed);
         loading.style.display = 'none';
     } catch (err) {
         console.error(err);
@@ -135,15 +215,21 @@ function renderPriceChart(series) {
     const canvas = document.getElementById('price-chart');
     if (chartState.priceChart) chartState.priceChart.destroy();
 
-    const buyPoints = series.map(p => ({ x: p.timestamp * 1000, y: p.avgLowPrice }));
-    const sellPoints = series.map(p => ({ x: p.timestamp * 1000, y: p.avgHighPrice }));
+    // Convert 0/null prices to null so Chart.js treats them as gaps rather
+    // than rendering dots at y=0 (the chart floor).
+    const buyPoints  = series.map(p => ({ x: p.timestamp * 1000, y: p.avgLowPrice  > 0 ? p.avgLowPrice  : null }));
+    const sellPoints = series.map(p => ({ x: p.timestamp * 1000, y: p.avgHighPrice > 0 ? p.avgHighPrice : null }));
 
-    // Per-point radius arrays: the last point (= most recent / "current" price)
-    // gets a larger dot so it's visually distinct and easy to hover even at
-    // the right edge of the canvas where Chart.js sometimes misses the hit.
-    const n = series.length;
-    const pointRadii = series.map((_, i) => i === n - 1 ? 7 : 2);
-    const hoverRadii = series.map((_, i) => i === n - 1 ? 10 : 5);
+    // Per-point radius arrays: the last point with a VALID price gets the
+    // larger dot. Using `n - 1` would mark the last index even if it's a
+    // null-price point (which trimTrailingIncomplete normally prevents, but
+    // single-sided nulls can still slip through on items with sparse data).
+    const lastValidIdx = series.reduce(
+        (best, p, i) => (p.avgLowPrice > 0 || p.avgHighPrice > 0) ? i : best, -1
+    );
+    const bigIdx = lastValidIdx >= 0 ? lastValidIdx : series.length - 1;
+    const pointRadii = series.map((_, i) => i === bigIdx ? 7 : 2);
+    const hoverRadii = series.map((_, i) => i === bigIdx ? 10 : 5);
 
     // Populate live price snapshot panel below the chart.
     updateSnapshotPanel(chartState.item);
@@ -456,33 +542,39 @@ function findSupportResistance(observations, kind /* 'support' | 'resistance' */
 let lastSuggestion = null;
 
 function updateProfitCalculator() {
-    const s = lastSuggestion;
     const item = chartState.item;
-    if (!s || !item || s.suggestedBuy == null || s.suggestedSell == null) {
-        ['calc-cost', 'calc-revenue', 'calc-tax', 'calc-profit', 'calc-roi'].forEach(id => setText(id, '—'));
-        return;
-    }
+    if (!item) return;
+
     const qtyEl = document.getElementById('calc-qty');
-    const qty = Math.max(0, parseInt(qtyEl.value, 10) || 0);
+    const qty   = Math.max(0, parseInt(qtyEl.value, 10) || 0);
     if (!qty) {
         ['calc-cost', 'calc-revenue', 'calc-tax', 'calc-profit', 'calc-roi'].forEach(id => setText(id, '—'));
         return;
     }
-    const cost = s.suggestedBuy * qty;
-    const grossRevenue = s.suggestedSell * qty;
-    // Tax is per-item, then summed. Capped per-item — Jagex caps the per-sale
-    // tax at GE_TAX_CAP, but you sell N items individually so each one is
-    // capped independently.
-    const taxPerItem = s.tax || 0;
-    const totalTax = taxPerItem * qty;
-    const netRevenue = grossRevenue - totalTax;
-    const profit = netRevenue - cost;
-    const roi = cost > 0 ? (profit / cost) * 100 : 0;
 
-    setText('calc-cost', formatGp(cost) + ' gp');
-    setText('calc-revenue', formatGp(grossRevenue) + ' gp');
-    setText('calc-tax', totalTax > 0 ? '−' + formatGp(totalTax) + ' gp' : '0 gp');
-    setText('calc-profit', formatGp(profit) + ' gp');
+    // Use chart-derived suggestion prices if available, otherwise fall back to
+    // the item's live GE prices so the calculator works immediately on open.
+    const s          = lastSuggestion;
+    const buyPrice   = (s && s.suggestedBuy  != null) ? s.suggestedBuy  : item.buy;
+    const sellPrice  = (s && s.suggestedSell != null) ? s.suggestedSell : item.sell;
+    const taxPerItem = (s && s.tax           != null) ? s.tax
+        : (item.taxExempt || sellPrice < GE_TAX_MIN_PRICE ? 0
+            : Math.min(Math.floor(sellPrice * GE_TAX_RATE), GE_TAX_CAP));
+
+    const cost       = buyPrice * qty;
+    const grossRev   = sellPrice * qty;
+    const totalTax   = taxPerItem * qty;
+    const profit     = grossRev - totalTax - cost;
+    const roi        = cost > 0 ? (profit / cost) * 100 : 0;
+
+    setText('calc-cost',    formatGp(cost)     + ' gp');
+    setText('calc-revenue', formatGp(grossRev) + ' gp');
+    setText('calc-tax',     totalTax > 0 ? '−' + formatGp(totalTax) + ' gp' : '0 gp');
+    const profitEl = document.getElementById('calc-profit');
+    if (profitEl) {
+        profitEl.textContent = (profit >= 0 ? '' : '−') + formatGp(Math.abs(profit)) + ' gp';
+        profitEl.className = 'calc-cell-value calc-profit ' + (profit > 0 ? 'pos' : profit < 0 ? 'neg' : '');
+    }
     setText('calc-roi', roi.toFixed(2) + '%');
 }
 
@@ -675,13 +767,19 @@ document.getElementById('modal-flip-btn')?.addEventListener('click', () => {
     const item = chartState.item;
     if (!item) return;
     if (typeof trackFlip === 'function') trackFlip(item);
-    // Brief visual feedback
+
+    // Save timestamp and refresh the timer
+    saveFlipTime(item.id);
+    startFlipTimer(item.id);
+
+    // Brief visual feedback on the button
     const btn = document.getElementById('modal-flip-btn');
     btn.classList.add('flip-logged');
     const label = btn.querySelector('.flip-btn-label');
     const orig  = label.textContent;
     label.textContent = 'Logged!';
     setTimeout(() => { label.textContent = orig; btn.classList.remove('flip-logged'); }, 1200);
+
     // Update count badge
     if (typeof getFlipCount === 'function') {
         const count = getFlipCount(item.id);
