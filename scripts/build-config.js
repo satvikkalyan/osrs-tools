@@ -7,11 +7,13 @@ const path = require('path');
 
 const supabaseUrl      = process.env.SUPABASE_URL      || '';
 const supabaseAnonKey  = process.env.SUPABASE_ANON_KEY || '';
+const passcode         = process.env.PASSCODE          || '';
 
 const out = `// Auto-generated at build time by scripts/build-config.js — do not edit or commit.
 // Uses var so constants.js can safely provide fallback defaults without re-declaration errors.
 var SUPABASE_URL      = '${supabaseUrl}';
 var SUPABASE_ANON_KEY = '${supabaseAnonKey}';
+var PASSCODE          = '${passcode}';
 `;
 
 const dest = path.join(__dirname, '..', 'js', 'config.js');
@@ -20,3 +22,4 @@ fs.writeFileSync(dest, out);
 console.log('[build-config] js/config.js written.');
 console.log('  SUPABASE_URL      :', supabaseUrl      ? '✓ set' : '⚠ not set (local-only mode)');
 console.log('  SUPABASE_ANON_KEY :', supabaseAnonKey  ? '✓ set' : '⚠ not set (local-only mode)');
+console.log('  PASSCODE          :', passcode         ? '✓ set' : '⚠ not set (gate disabled)');
