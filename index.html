@@ -50,6 +50,7 @@
             <span class="tab-badge" id="drops-badge" style="display:none;">0</span>
         </button>
         <button class="tab" data-tab="decant">Decant</button>
+        <button class="tab" data-tab="repair">Repair</button>
     </div>
 
     <!-- FLIPS TAB -->
@@ -120,6 +121,11 @@
         </div>
 
         <div id="error-box"></div>
+
+        <div id="yours-empty-notice" style="display:none;" class="yours-empty-notice">
+            ★ <strong>Yours first</strong> is on, but you haven't imported any trades yet.
+            <a href="#" id="yours-open-import">Import trade history</a> to pin your items to the top.
+        </div>
 
         <div class="table-wrap" id="table-wrap" style="display:none;">
             <table>
@@ -214,17 +220,16 @@
     <div id="decant-tab" style="display:none;">
         <div class="drops-controls">
             <div class="drops-controls-left">
-                <div class="control">
-                    <label>Direction</label>
-                    <select id="decant-direction">
-                        <option value="3→4" selected>3→4 (buy 3-dose, sell 4-dose)</option>
-                        <option value="4→3">4→3 (buy 4-dose, sell 3-dose)</option>
-                        <option value="both">Both directions</option>
-                    </select>
-                </div>
+                <select id="decant-direction" style="display:none;" aria-hidden="true">
+                    <option value="3→4" selected>3→4</option>
+                </select>
                 <div class="control">
                     <label>Min profit / batch (gp)</label>
                     <input type="number" id="decant-min-profit" value="0" min="0" class="mono">
+                </div>
+                <div class="control">
+                    <label>Min daily volume</label>
+                    <input type="number" id="decant-min-volume" value="0" min="0" class="mono">
                 </div>
             </div>
             <div class="drops-controls-right">
@@ -243,6 +248,7 @@
                         <th class="num">Batch revenue</th>
                         <th class="num">Profit / batch</th>
                         <th class="num">Profit / hr</th>
+                        <th class="num">Daily vol</th>
                     </tr>
                 </thead>
                 <tbody id="decant-tbody"></tbody>
@@ -251,6 +257,52 @@
         </div>
     </div>
     <!-- /DECANT TAB -->
+
+    <!-- REPAIR TAB -->
+    <div id="repair-tab" style="display:none;">
+        <div class="drops-controls">
+            <div class="drops-controls-left">
+                <div class="control">
+                    <label>Smithing level</label>
+                    <input type="number" id="repair-smithing" value="1" min="1" max="99" class="mono" style="width:70px;" title="Level 1 = NPC repair price. Higher = armour stand discount (formula: NPC × (1 − level/200)). At 99 smithing you save ~50%.">
+                </div>
+                <div class="control">
+                    <label>Min profit / item (gp)</label>
+                    <input type="number" id="repair-min-profit" value="0" min="0" class="mono">
+                </div>
+                <div class="control">
+                    <label>Min daily volume</label>
+                    <input type="number" id="repair-min-volume" value="0" min="0" class="mono">
+                </div>
+            </div>
+            <div class="drops-controls-right">
+                <button class="btn-refresh-drops primary" id="repair-refresh">↻ Refresh</button>
+            </div>
+        </div>
+        <div class="repair-note dim" style="font-size:12px;padding:6px 0 10px;line-height:1.5;">
+            Buy broken <strong>"X 0"</strong> on the GE → repair at Bob in Lumbridge (or POH armour stand) → sell repaired <strong>"X"</strong>.
+            Smithing level 1 = NPC price. Higher levels reduce cost via armour stand: <code>NPC × (1 − level/200)</code>.
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th class="num">Buy broken</th>
+                        <th class="num">Repair cost</th>
+                        <th class="num">Sell repaired</th>
+                        <th class="num">GE tax</th>
+                        <th class="num">Profit / item</th>
+                        <th class="num">Profit / hr</th>
+                        <th class="num">Daily vol</th>
+                    </tr>
+                </thead>
+                <tbody id="repair-tbody"></tbody>
+            </table>
+            <div id="repair-empty" class="empty" style="padding:30px;display:none;">No profitable repair opportunities found. Try adjusting filters or refreshing prices.</div>
+        </div>
+    </div>
+    <!-- /REPAIR TAB -->
 
     <!-- Import trades modal -->
     <div class="modal-backdrop" id="import-backdrop">
@@ -405,6 +457,8 @@
 <script src="js/drops.js"></script>
 <script src="js/api.js"></script>
 <script src="js/scoring.js"></script>
+<script src="js/decant.js"></script>
+<script src="js/repair.js"></script>
 <script src="js/render.js"></script>
 <script src="js/refresh.js"></script>
 <script src="js/events.js"></script>

@@ -63,4 +63,5 @@ const apiCache = {
     mapping: null,
     hourly: null,
     daily: null,
+    latest: null,   // raw /latest data — used by repair tab to recompute on smithing change
 };

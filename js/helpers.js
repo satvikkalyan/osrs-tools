@@ -13,6 +13,16 @@ function escapeHtml(s) {
     }[c]));
 }
 
+// Volume colour thresholds — applied to the daily-volume cell everywhere.
+// Green ≥ 1M  |  Yellow ≥ 300k  |  Orange ≥ 50k  |  Red < 50k
+function volClass(vol) {
+    if (!vol) return 'vol-red';
+    if (vol >= 1_000_000) return 'vol-green';
+    if (vol >= 300_000)   return 'vol-yellow';
+    if (vol >= 50_000)    return 'vol-orange';
+    return 'vol-red';
+}
+
 function setText(id, txt) {
     const el = document.getElementById(id);
     if (el) el.textContent = txt;

@@ -37,6 +37,7 @@ async function fetchData() {
         apiCache.mapping = mapping;
         apiCache.hourly  = hourly.data;
         apiCache.daily   = dailyData;
+        apiCache.latest  = latest.data;
 
         state.items       = computeFlips(mapping, latest.data, hourly.data, dailyData);
         // Search pool covers all items with any price data, not just profitable ones.
@@ -45,6 +46,10 @@ async function fetchData() {
         hideError();
         render();
         updatePriceHistoryAndDetect(state.items);
+        computeDecants(mapping, latest.data);
+        renderDecantTab();
+        computeRepairs(mapping, latest.data);
+        renderRepairTab();
         preCacheIcons(mapping); // background — caches all icon blobs in IndexedDB
     } catch (err) {
         console.error('Flip Finder load failed:', err);

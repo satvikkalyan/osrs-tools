@@ -24,6 +24,11 @@ function changePageSize(n) {
     document.getElementById(id).addEventListener('change', debouncedRender);
 });
 
+document.getElementById('yours-open-import')?.addEventListener('click', e => {
+    e.preventDefault();
+    openImportModal();
+});
+
 document.querySelectorAll('th[data-sort]').forEach(th => {
     th.addEventListener('click', () => {
         const k = th.dataset.sort;

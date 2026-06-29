@@ -68,6 +68,14 @@ function render() {
         paginationEl.innerHTML = html;
     }
 
+    // "Yours first" empty notice
+    const yoursNotice = document.getElementById('yours-empty-notice');
+    if (yoursNotice) {
+        const yoursOn = document.getElementById('filter-yours-first') &&
+                        document.getElementById('filter-yours-first').checked;
+        yoursNotice.style.display = (yoursOn && personalWatchlist.size === 0) ? 'block' : 'none';
+    }
+
     // Sort header state
     document.querySelectorAll('th[data-sort]').forEach(th => {
         const isSorted = th.dataset.sort === state.sortBy;
@@ -123,7 +131,7 @@ function rowHtml(item, idx) {
             <td class="num mono neg">${item.tax ? '−' + formatGp(item.tax) : '<span class="dim">—</span>'}</td>
             <td class="num mono pos">${formatGp(item.netMargin)}</td>
             <td class="num mono ${marginPctClass}">${item.marginPct.toFixed(1)}%</td>
-            <td class="num mono" title="Daily total: ${item.dailyVolume.toLocaleString()}  ·  1h: ${item.volume.toLocaleString()} (min of buy/sell)">${item.dailyVolume.toLocaleString()}</td>
+            <td class="num mono ${volClass(item.dailyVolume)}" title="Daily total: ${item.dailyVolume.toLocaleString()}  ·  1h: ${item.volume.toLocaleString()} (min of buy/sell)">${item.dailyVolume.toLocaleString()}</td>
             <td class="num mono">${item.buyLimit ? item.buyLimit.toLocaleString() : '<span class="dim">—</span>'}</td>
             <td class="num mono ${ageClass}">${ageDisplay}</td>
             <td class="num mono profit-cell">${formatGp(item.profitPerHour)}</td>

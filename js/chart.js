@@ -48,6 +48,33 @@ function openChartModal(item) {
     loadChart();
 }
 
+function updateSnapshotPanel(item) {
+    if (!item) return;
+    const row = document.getElementById('snapshot-row');
+    if (row) row.style.display = 'grid';
+
+    setText('snap-buy',  formatGp(item.buy)  + ' gp');
+    setText('snap-sell', formatGp(item.sell) + ' gp');
+
+    let breakeven = item.buy;
+    if (!item.taxExempt && item.buy >= GE_TAX_MIN_PRICE) {
+        // If 2% tax would exceed cap, add cap directly; otherwise solve for min sell
+        // such that floor(sell * 0.02) ≥ 0 and net ≥ buy: sell = ceil(buy / 0.98)
+        const uncappedTax = item.buy * GE_TAX_RATE;
+        breakeven = uncappedTax >= GE_TAX_CAP
+            ? item.buy + GE_TAX_CAP
+            : Math.ceil(item.buy / (1 - GE_TAX_RATE));
+    }
+    setText('snap-breakeven', formatGp(breakeven) + ' gp');
+
+    const profit = item.netMargin;
+    const profitEl = document.getElementById('snap-profit');
+    if (profitEl) {
+        profitEl.textContent = (profit >= 0 ? '+' : '') + formatGp(profit) + ' gp';
+        profitEl.style.color = profit > 0 ? 'var(--green)' : profit < 0 ? 'var(--red)' : '';
+    }
+}
+
 function closeChartModal() {
     document.getElementById('modal-backdrop').classList.remove('open');
     if (chartState.priceChart) { chartState.priceChart.destroy(); chartState.priceChart = null; }
@@ -106,10 +133,8 @@ function renderPriceChart(series) {
     const pointRadii = series.map((_, i) => i === n - 1 ? 7 : 2);
     const hoverRadii = series.map((_, i) => i === n - 1 ? 10 : 5);
 
-    // Suggested levels from the visible window — used for the panel cards below
-    // the chart. The lines are intentionally NOT drawn on the chart itself.
-    const suggestion = computeSuggestions(series);
-    updateSuggestionPanel(suggestion);
+    // Populate live price snapshot panel below the chart.
+    updateSnapshotPanel(chartState.item);
 
     // Breakeven sell line: minimum sell price to cover GE tax if you buy at
     // the last visible data point's avgLowPrice. Anchoring to the last chart
@@ -620,11 +645,7 @@ document.querySelectorAll('#range-buttons .range-btn').forEach(b => {
     });
 });
 
-// SR toggle re-runs the suggestion (uses the already-loaded series — no
-// need to refetch).
-document.getElementById('sr-mode').addEventListener('change', () => {
-    loadChart();
-});
+// (SR toggle removed — replaced by live snapshot panel)
 
 // Profit calculator inputs
 document.getElementById('calc-qty').addEventListener('input', updateProfitCalculator);

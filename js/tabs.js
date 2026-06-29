@@ -7,7 +7,11 @@ document.querySelectorAll('#tabs .tab').forEach(tab => {
         const which = tab.dataset.tab;
         document.getElementById('flips-tab').style.display = which === 'flips' ? 'block' : 'none';
         document.getElementById('drops-tab').style.display = which === 'drops' ? 'block' : 'none';
+        document.getElementById('decant-tab').style.display = which === 'decant' ? 'block' : 'none';
+        document.getElementById('repair-tab').style.display = which === 'repair' ? 'block' : 'none';
         if (which === 'drops') renderDropsTab();
+        if (which === 'decant') renderDecantTab();
+        if (which === 'repair') renderRepairTab();
     });
 });
 
@@ -30,6 +34,16 @@ document.getElementById('drop-notify').addEventListener('change', e => {
         Notification.requestPermission();
     }
 });
+
+document.getElementById('decant-direction').addEventListener('change', renderDecantTab);
+document.getElementById('decant-min-profit').addEventListener('input', renderDecantTab);
+document.getElementById('decant-min-volume').addEventListener('input', renderDecantTab);
+document.getElementById('decant-refresh').addEventListener('click', fetchData);
+
+document.getElementById('repair-smithing').addEventListener('input', renderRepairTab);
+document.getElementById('repair-min-profit').addEventListener('input', renderRepairTab);
+document.getElementById('repair-min-volume').addEventListener('input', renderRepairTab);
+document.getElementById('repair-refresh').addEventListener('click', fetchData);
 
 // Live-update the "X ago" text every 30s so the drops list stays current
 // without re-rendering rows.
