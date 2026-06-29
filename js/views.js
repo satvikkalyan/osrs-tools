@@ -15,12 +15,17 @@ const VIEWS_LOCAL_KEY    = 'osrs-view-counts'; // localStorage key
 // ---------- Supabase helpers ----------
 
 function sbHeaders() {
-    return {
-        'apikey':        SUPABASE_ANON_KEY,
+    // Supports both legacy anon key (eyJ...) and new publishable key (sb_publishable_...)
+    const headers = {
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         'Content-Type':  'application/json',
         'Prefer':        'return=minimal',
     };
+    // Legacy key format also needs the apikey header
+    if (SUPABASE_ANON_KEY.startsWith('eyJ')) {
+        headers['apikey'] = SUPABASE_ANON_KEY;
+    }
+    return headers;
 }
 
 const sbEnabled = () => !!(SUPABASE_URL && SUPABASE_ANON_KEY);
