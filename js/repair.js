@@ -9,6 +9,7 @@
 //   → level 99 smithing ≈ 50% cheaper than NPC.
 
 let repairResults = [];
+const repairSort = { by: 'profit', dir: 'desc' };
 
 // NPC repair cost for a fully degraded barrows piece (fixed game values).
 function barrowsNpcCost(baseName) {
@@ -103,14 +104,16 @@ function renderRepairTab() {
     }
 
     const usingStand = smithing > 1;
+    const sorted = applySortArr(filtered, repairSort.by, repairSort.dir);
+    syncSortHeaders(tbody.closest('table'), repairSort);
 
-    tbody.innerHTML = filtered.map(r => {
+    tbody.innerHTML = sorted.map(r => {
         const profitClass = r.profit > 0 ? 'pos' : r.profit < 0 ? 'neg' : 'dim';
         const repairLabel = usingStand
             ? `${formatGp(r.repairCost)} gp <span class="dim tiny">(stand)</span>`
             : `${formatGp(r.repairCost)} gp <span class="dim tiny">(NPC)</span>`;
         return `
-        <tr>
+        <tr style="cursor:pointer;" data-repair-name="${escapeHtml(r.name)}">
             <td>
                 <div class="item-info">
                     <div class="item-name">${escapeHtml(r.name)}</div>
@@ -133,4 +136,12 @@ function renderRepairTab() {
             <td class="num mono ${r.dailyVolume ? volClass(r.dailyVolume) : 'dim'}">${r.dailyVolume ? r.dailyVolume.toLocaleString() : '—'}</td>
         </tr>`;
     }).join('');
+
+    tbody.querySelectorAll('tr[data-repair-name]').forEach(tr => {
+        tr.addEventListener('click', () => {
+            const name = tr.dataset.repairName;
+            const result = sorted.find(r => r.name === name);
+            if (result) openRepairModal(result);
+        });
+    });
 }

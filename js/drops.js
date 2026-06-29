@@ -6,6 +6,7 @@ const priceHistory = new Map();
 const HISTORY_BUFFER_SIZE = 10; // ~10 minutes at 60s refresh
 // Detected drops list (newest first). Persisted to localStorage.
 let detectedDrops = JSON.parse(localStorage.getItem('osrs-drops') || '[]');
+const dropsSort = { by: 'dropPct', dir: 'desc' };
 const DROPS_STORAGE_KEY = 'osrs-drops';
 const MAX_STORED_DROPS = 50;
 // Don't re-flag the same item more than once per cooldown window.
@@ -99,6 +100,20 @@ function updatePriceHistoryAndDetect(items) {
         });
     }
 
+    // On every refresh, check whether previously detected drops have recovered.
+    // A drop is considered recovered when the current buy price is back above
+    // 95% of the baseline it dropped from. We re-mark on every call so the
+    // status stays accurate even after multiple refreshes.
+    detectedDrops = detectedDrops.map(drop => {
+        if (drop.recovered) return drop; // already recovered, keep as-is
+        const currentItem = items.find(x => x.id === drop.itemId);
+        if (!currentItem || !currentItem.buy) return drop;
+        if (currentItem.buy >= drop.fromPrice * 0.95) {
+            return { ...drop, recovered: true, recoveredAt: now };
+        }
+        return drop;
+    });
+
     if (newDrops.length) {
         // Newest at the front
         detectedDrops = [...newDrops, ...detectedDrops].slice(0, MAX_STORED_DROPS);
@@ -106,8 +121,11 @@ function updatePriceHistoryAndDetect(items) {
         if (document.getElementById('drop-notify').checked) {
             newDrops.forEach(notifyDrop);
         }
-        renderDropsTab();
     }
+
+    // Re-render drops tab on every refresh (new drops OR recovery status changes).
+    renderDropsTab();
+    persistDrops();
 }
 
 /**
@@ -239,12 +257,17 @@ function renderDropsTab() {
     wrap.querySelector('table').style.display = 'table';
     empty.style.display = 'none';
 
-    tbody.innerHTML = visible.map(dropRowHtml).join('');
+    const sortedDrops = applySortArr(visible, dropsSort.by, dropsSort.dir);
+    syncSortHeaders(wrap.querySelector('table'), dropsSort);
+    tbody.innerHTML = sortedDrops.map(dropRowHtml).join('');
     tbody.querySelectorAll('tr').forEach(tr => {
         const id = parseInt(tr.dataset.itemId, 10);
         tr.addEventListener('click', e => {
             if (e.target.classList.contains('drop-dismiss')) return;
-            const item = state.items.find(x => x.id === id);
+            // state.items only contains currently profitable flips; crashed items
+            // won't be there, so fall back to searchItems which covers all items.
+            const item = state.items.find(x => x.id === id)
+                      || (state.searchItems && state.searchItems.find(x => x.id === id));
             if (item) openChartModal(item);
         });
     });
@@ -277,8 +300,11 @@ function dropRowHtml(drop) {
     const yoursBadge = isYours
         ? '<span class="badge badge-yours" title="In your imported trade history">★ yours</span>'
         : '';
+    const recoveredBadge = drop.recovered
+        ? '<span class="badge badge-recovered" title="Price has recovered above 95% of baseline">↑ recovered</span>'
+        : '';
     return `
-        <tr data-item-id="${drop.itemId}">
+        <tr data-item-id="${drop.itemId}"${drop.recovered ? ' class="drop-recovered"' : ''}>
             <td>
                 <div class="item-cell">
                     ${icon}
@@ -288,6 +314,7 @@ function dropRowHtml(drop) {
                             <span>Buy limit ${drop.buyLimit ? drop.buyLimit.toLocaleString() : '—'}</span>
                             ${watchBadge}
                             ${yoursBadge}
+                            ${recoveredBadge}
                         </div>
                     </div>
                 </div>

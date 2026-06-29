@@ -23,6 +23,42 @@ function volClass(vol) {
     return 'vol-red';
 }
 
+// ── Generic table sort helpers (Decant / Repair / Drops tabs) ────────────────
+function applySortArr(arr, key, dir) {
+    return [...arr].sort((a, b) => {
+        const va = a[key] ?? 0;
+        const vb = b[key] ?? 0;
+        const cmp = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
+        return dir === 'asc' ? cmp : -cmp;
+    });
+}
+
+function syncSortHeaders(tableEl, sortState) {
+    if (!tableEl) return;
+    tableEl.querySelectorAll('th[data-sort]').forEach(th => {
+        const active = th.dataset.sort === sortState.by;
+        th.classList.toggle('sorted', active);
+        th.classList.toggle('asc',    active && sortState.dir === 'asc');
+        th.classList.toggle('desc',   active && sortState.dir === 'desc');
+    });
+}
+
+function attachTableSort(tableEl, sortState, renderFn) {
+    if (!tableEl) return;
+    tableEl.querySelectorAll('th[data-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+            const k = th.dataset.sort;
+            if (sortState.by === k) {
+                sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortState.by = k;
+                sortState.dir = (k === 'name' || k === 'base') ? 'asc' : 'desc';
+            }
+            renderFn();
+        });
+    });
+}
+
 function setText(id, txt) {
     const el = document.getElementById(id);
     if (el) el.textContent = txt;

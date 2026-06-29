@@ -1,4 +1,9 @@
 'use strict';
+// ---------- Sortable table headers for non-Flips tabs ----------
+attachTableSort(document.querySelector('#drops-tab table'),  dropsSort,  renderDropsTab);
+attachTableSort(document.querySelector('#decant-tab table'), decantSort, renderDecantTab);
+attachTableSort(document.querySelector('#repair-tab table'), repairSort, renderRepairTab);
+
 // ---------- Mobile filter toggle ----------
 document.getElementById('flips-filter-toggle')?.addEventListener('click', function () {
     const ctrl = document.getElementById('controls');

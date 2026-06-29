@@ -27,3 +27,14 @@ const BUY_LIMIT_WINDOW_HRS = 4;
 // Items with 0 buy limit in the mapping = no published limit. Treat as
 // effectively unlimited for scoring purposes — but rank them by raw volume.
 const UNLIMITED_PROXY = 1_000_000;
+
+// ---------- Supabase — global view tracking ----------
+// Credentials are injected at build time via scripts/build-config.js into
+// js/config.js (loaded before this file, git-ignored).
+// Set SUPABASE_URL and SUPABASE_ANON_KEY in Netlify → Site settings → Environment variables.
+// Without them the app runs in local-only mode (localStorage per browser).
+//
+// Provide safe defaults so the app works even without config.js present
+// (e.g. opening index.html directly from the filesystem).
+if (typeof SUPABASE_URL      === 'undefined') var SUPABASE_URL      = '';
+if (typeof SUPABASE_ANON_KEY === 'undefined') var SUPABASE_ANON_KEY = '';

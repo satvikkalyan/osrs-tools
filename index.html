@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>OSRS Flip Finder</title>
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="OSRS Flipper">
@@ -27,6 +28,7 @@
                 <input type="text" id="global-search" placeholder="Search any item (e.g. dragon dagger)…" autocomplete="off">
                 <div class="global-search-results" id="global-search-results"></div>
             </div>
+            <button id="trending-toggle" title="Most viewed items across all users">🔥 Trending</button>
             <button id="import-trades" title="Load your RuneLite trade history CSV/JSON to build a personal watchlist.">📥 Import trades</button>
             <label class="auto-toggle" title="Auto-refresh prices in the background.">
                 <input type="checkbox" id="auto-refresh" checked>
@@ -206,13 +208,13 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Item</th>
-                        <th class="num">Was</th>
-                        <th class="num">Now</th>
-                        <th class="num">Drop</th>
-                        <th class="num mob-hide">Window</th>
-                        <th class="num mob-hide">Daily vol</th>
-                        <th class="num">Detected</th>
+                        <th data-sort="name">Item</th>
+                        <th class="num" data-sort="fromPrice">Was</th>
+                        <th class="num" data-sort="toPrice">Now</th>
+                        <th class="num" data-sort="dropPct">Drop</th>
+                        <th class="num mob-hide" data-sort="windowMin">Window</th>
+                        <th class="num mob-hide" data-sort="dailyVolume">Daily vol</th>
+                        <th class="num" data-sort="detectedAt">Detected</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -247,15 +249,14 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Potion</th>
-                        <th class="num mob-hide">Direction</th>
-                        <th class="num mob-hide">Buy (each)</th>
-                        <th class="num mob-hide">Sell (each)</th>
-                        <th class="num mob-hide">Batch cost</th>
-                        <th class="num mob-hide">Batch revenue</th>
-                        <th class="num">Profit / batch</th>
-                        <th class="num mob-hide">Profit / hr</th>
-                        <th class="num">Daily vol</th>
+                        <th data-sort="base">Potion</th>
+                        <th class="num mob-hide" data-sort="buyPrice">Buy (each)</th>
+                        <th class="num mob-hide" data-sort="sellPrice">Sell (each)</th>
+                        <th class="num mob-hide" data-sort="cost">Batch cost</th>
+                        <th class="num mob-hide" data-sort="revenue">Batch revenue</th>
+                        <th class="num" data-sort="profit">Profit / batch</th>
+                        <th class="num mob-hide" data-sort="profitPerFlip">Profit / flip</th>
+                        <th class="num" data-sort="dailyVolume">Daily vol</th>
                     </tr>
                 </thead>
                 <tbody id="decant-tbody"></tbody>
@@ -294,14 +295,14 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Item</th>
-                        <th class="num">Buy broken</th>
-                        <th class="num">Repair cost</th>
-                        <th class="num mob-hide">Sell repaired</th>
-                        <th class="num mob-hide">GE tax</th>
-                        <th class="num">Profit / item</th>
-                        <th class="num mob-hide">Profit / hr</th>
-                        <th class="num">Daily vol</th>
+                        <th data-sort="name">Item</th>
+                        <th class="num" data-sort="buyCost">Buy broken</th>
+                        <th class="num" data-sort="repairCost">Repair cost</th>
+                        <th class="num mob-hide" data-sort="sellGross">Sell repaired</th>
+                        <th class="num mob-hide" data-sort="tax">GE tax</th>
+                        <th class="num" data-sort="profit">Profit / item</th>
+                        <th class="num mob-hide" data-sort="profitPerHour">Profit / hr</th>
+                        <th class="num" data-sort="dailyVolume">Daily vol</th>
                     </tr>
                 </thead>
                 <tbody id="repair-tbody"></tbody>
@@ -447,6 +448,86 @@
     </div>
 </div>
 
+<!-- Decant chart modal -->
+<div class="modal-backdrop" id="dchart-backdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-header">
+            <div class="modal-title-row">
+                <div>
+                    <div class="modal-title" id="dchart-title">—</div>
+                    <div class="modal-subtitle" id="dchart-subtitle">—</div>
+                </div>
+            </div>
+            <button class="modal-close" id="dchart-close" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
+                <div class="modal-stat"><div class="modal-stat-label">Batch cost (×4)</div><div class="modal-stat-value" id="dchart-buy3">—</div></div>
+                <div class="modal-stat"><div class="modal-stat-label">Revenue (×3, after tax)</div><div class="modal-stat-value" id="dchart-sell4">—</div></div>
+                <div class="modal-stat"><div class="modal-stat-label">Profit / batch</div><div class="modal-stat-value" id="dchart-profit">—</div></div>
+                <div class="modal-stat"><div class="modal-stat-label">Profit / flip</div><div class="modal-stat-value" id="dchart-flip">—</div></div>
+            </div>
+            <div style="margin-bottom:20px;">
+                <div class="modal-subtitle" style="font-size:11px;color:var(--text-dim);margin-bottom:6px;" id="dchart-label3">3-dose (buying)</div>
+                <div class="chart-wrap dchart-wrap"><canvas id="dchart-canvas-3"></canvas></div>
+            </div>
+            <div>
+                <div class="modal-subtitle" style="font-size:11px;color:var(--text-dim);margin-bottom:6px;" id="dchart-label4">4-dose (selling)</div>
+                <div class="chart-wrap dchart-wrap"><canvas id="dchart-canvas-4"></canvas></div>
+            </div>
+            <div id="dchart-loading" class="chart-loading" style="display:none;">Loading price history…</div>
+        </div>
+    </div>
+</div>
+
+<!-- Trending sidebar overlay -->
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<!-- Trending sidebar -->
+<aside class="trending-sidebar" id="trending-sidebar" aria-label="Trending items">
+    <div class="sidebar-header">
+        <span class="sidebar-title">🔥 Trending</span>
+        <button class="sidebar-close" id="sidebar-close" aria-label="Close">✕</button>
+    </div>
+    <div class="sidebar-subtitle">Most viewed items across all users</div>
+    <div class="sidebar-list" id="sidebar-list">
+        <div class="sidebar-loading">Loading…</div>
+    </div>
+    <div class="sidebar-footer" id="sidebar-footer"></div>
+</aside>
+
+<!-- Repair chart modal -->
+<div class="modal-backdrop" id="rchart-backdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-header">
+            <div class="modal-title-row">
+                <div>
+                    <div class="modal-title" id="rchart-title">—</div>
+                    <div class="modal-subtitle" id="rchart-subtitle">—</div>
+                </div>
+            </div>
+            <button class="modal-close" id="rchart-close" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
+                <div class="modal-stat"><div class="modal-stat-label">Buy broken</div><div class="modal-stat-value" id="rchart-buy">—</div></div>
+                <div class="modal-stat"><div class="modal-stat-label">Repair cost</div><div class="modal-stat-value" id="rchart-repair">—</div></div>
+                <div class="modal-stat"><div class="modal-stat-label">Sell repaired</div><div class="modal-stat-value" id="rchart-sell">—</div></div>
+                <div class="modal-stat"><div class="modal-stat-label">Profit / item</div><div class="modal-stat-value" id="rchart-profit">—</div></div>
+            </div>
+            <div style="margin-bottom:20px;">
+                <div class="modal-subtitle" style="font-size:11px;color:var(--text-dim);margin-bottom:6px;" id="rchart-label-broken">broken (buying)</div>
+                <div class="chart-wrap dchart-wrap"><canvas id="rchart-canvas-broken"></canvas></div>
+            </div>
+            <div>
+                <div class="modal-subtitle" style="font-size:11px;color:var(--text-dim);margin-bottom:6px;" id="rchart-label-repaired">repaired (selling)</div>
+                <div class="chart-wrap dchart-wrap"><canvas id="rchart-canvas-repaired"></canvas></div>
+            </div>
+            <div id="rchart-loading" class="chart-loading" style="display:none;">Loading price history…</div>
+        </div>
+    </div>
+</div>
+
 <footer class="legal">
     <p><strong>OSRS Flip Finder</strong> is an unofficial, fan-made tool and is not affiliated with, endorsed by, or connected to Jagex Ltd. in any way.</p>
     <p>"Old School RuneScape" and "OSRS" are trademarks of Jagex Ltd. Item icons and price data are sourced from the
@@ -456,6 +537,7 @@
 </footer>
 
 <!-- JS modules loaded in dependency order -->
+<script src="js/config.js" onerror="/* local dev — no config.js, using defaults */"></script>
 <script src="js/constants.js"></script>
 <script src="js/cache.js"></script>
 <script src="js/state.js"></script>
@@ -470,6 +552,9 @@
 <script src="js/refresh.js"></script>
 <script src="js/events.js"></script>
 <script src="js/chart.js"></script>
+<script src="js/decant-modal.js"></script>
+<script src="js/repair-modal.js"></script>
+<script src="js/views.js"></script>
 <script src="js/import.js"></script>
 <script src="js/tabs.js"></script>
 <script src="js/search.js"></script>

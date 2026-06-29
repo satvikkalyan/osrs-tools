@@ -10,6 +10,8 @@ const chartState = {
 
 function openChartModal(item) {
     chartState.item = item;
+    // Track view for the trending sidebar (views.js wires this up)
+    if (typeof trackView === 'function') trackView(item);
     document.getElementById('modal-backdrop').classList.add('open');
 
     // Header

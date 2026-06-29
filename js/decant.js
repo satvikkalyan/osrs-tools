@@ -7,6 +7,7 @@
 // Conversion ratio: 4×(3-dose) ↔ 3×(4-dose)  [both = 12 doses]
 
 let decantResults = [];
+const decantSort = { by: 'profit', dir: 'desc' };
 
 function computeGeTax(id, price) {
     if (TAX_EXEMPT_IDS.has(id) || price < GE_TAX_MIN_PRICE) return 0;
@@ -56,15 +57,17 @@ function computeDecants(mapping, latestData) {
 
         // 3→4: buy 4×(3-dose) at buy3, sell 3×(4-dose) at sell4
         {
-            const tax     = computeGeTax(d4.id, sell4);
+            const tax    = computeGeTax(d4.id, sell4);
             const revenue = 3 * (sell4 - tax);
-            const cost    = 4 * buy3;
-            const profit  = revenue - cost;
-            // Batches per hour limited by 3-dose buy limit (need 4 per batch)
-            const bph = d3.buyLimit > 0 ? (d3.buyLimit / 4) / 4 : null;
+            const cost   = 4 * buy3;
+            const profit = revenue - cost;
+            // Profit per flip = total profit from buying the full 4h limit in one cycle.
+            // buyLimit 3-dose potions → floor(buyLimit/4) batches
+            const batchesPerFlip = d3.buyLimit > 0 ? Math.floor(d3.buyLimit / 4) : null;
             results.push({
                 base,
-                direction: '3→4',
+                buyId:   d3.id,
+                sellId:  d4.id,
                 buyName: d3.name,
                 sellName: d4.name,
                 buyPrice: buy3,
@@ -74,10 +77,9 @@ function computeDecants(mapping, latestData) {
                 cost,
                 revenue,
                 profit,
-                profitPerHour: bph != null ? Math.round(profit * bph) : null,
+                profitPerFlip: batchesPerFlip != null ? Math.round(profit * batchesPerFlip) : null,
                 buyLimit: d3.buyLimit,
                 members: !!(d3.members || d4.members),
-                // volume of the item being sold (4-dose) — limits how fast you can flip
                 dailyVolume: dailyVol(d4.id),
             });
         }
@@ -94,16 +96,12 @@ function renderDecantTab() {
     const empty = document.getElementById('decant-empty');
     if (!tbody) return;
 
-    const minProfit  = parseFloat(document.getElementById('decant-min-profit').value) || 0;
-    const minVolume  = parseFloat(document.getElementById('decant-min-volume').value) || 0;
-    const direction  = document.getElementById('decant-direction').value;
+    const minProfit = parseFloat(document.getElementById('decant-min-profit').value) || 0;
+    const minVolume = parseFloat(document.getElementById('decant-min-volume').value) || 0;
 
-    const filtered = decantResults.filter(r => {
-        if (r.profit < minProfit) return false;
-        if (r.dailyVolume < minVolume) return false;
-        if (direction !== 'both' && r.direction !== direction) return false;
-        return true;
-    });
+    const filtered = decantResults.filter(r =>
+        r.profit >= minProfit && r.dailyVolume >= minVolume
+    );
 
     if (empty) empty.style.display = filtered.length ? 'none' : 'block';
 
@@ -112,10 +110,13 @@ function renderDecantTab() {
         return;
     }
 
-    tbody.innerHTML = filtered.map(r => {
+    const sorted = applySortArr(filtered, decantSort.by, decantSort.dir);
+    syncSortHeaders(tbody.closest('table'), decantSort);
+
+    tbody.innerHTML = sorted.map(r => {
         const profitClass = r.profit > 0 ? 'pos' : r.profit < 0 ? 'neg' : 'dim';
         return `
-        <tr>
+        <tr style="cursor:pointer;" data-decant-base="${escapeHtml(r.base)}">
             <td>
                 <div class="item-info">
                     <div class="item-name">${escapeHtml(r.base)}</div>
@@ -125,14 +126,22 @@ function renderDecantTab() {
                     </div>
                 </div>
             </td>
-            <td class="num mob-hide"><span class="badge badge-hot">${escapeHtml(r.direction)}</span></td>
             <td class="num mono mob-hide">${r.buyQty}× ${formatGp(r.buyPrice)} gp</td>
             <td class="num mono mob-hide">${r.sellQty}× ${formatGp(r.sellPrice)} gp</td>
             <td class="num mono dim mob-hide">−${formatGp(r.cost)} gp</td>
             <td class="num mono dim mob-hide">+${formatGp(Math.round(r.revenue))} gp</td>
             <td class="num mono ${profitClass} ${r.profit > 0 ? 'profit-cell' : ''}">${r.profit > 0 ? '+' : ''}${formatGp(Math.round(r.profit))} gp</td>
-            <td class="num mono dim mob-hide">${r.profitPerHour != null ? formatGp(r.profitPerHour) + '/hr' : '—'}</td>
+            <td class="num mono dim mob-hide">${r.profitPerFlip != null ? formatGp(r.profitPerFlip) + ' gp' : '—'}</td>
             <td class="num mono ${r.dailyVolume ? volClass(r.dailyVolume) : 'dim'}">${r.dailyVolume ? r.dailyVolume.toLocaleString() : '—'}</td>
         </tr>`;
     }).join('');
+
+    // Row click → open decant chart modal
+    tbody.querySelectorAll('tr[data-decant-base]').forEach(tr => {
+        tr.addEventListener('click', () => {
+            const base = tr.dataset.decantBase;
+            const result = sorted.find(r => r.base === base);
+            if (result) openDecantModal(result);
+        });
+    });
 }

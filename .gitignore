@@ -1,2 +1,4 @@
 .DS_Store
 logs.txt
+js/config.js
+.logs.txt.swp
