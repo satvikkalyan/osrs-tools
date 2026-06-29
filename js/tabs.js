@@ -1,4 +1,12 @@
 'use strict';
+// ---------- Mobile filter toggle ----------
+document.getElementById('flips-filter-toggle')?.addEventListener('click', function () {
+    const ctrl = document.getElementById('controls');
+    const isOpen = ctrl.style.display === 'grid';
+    ctrl.style.display = isOpen ? 'none' : 'grid';
+    this.classList.toggle('open', !isOpen);
+});
+
 // ---------- Tabs ----------
 document.querySelectorAll('#tabs .tab').forEach(tab => {
     tab.addEventListener('click', () => {

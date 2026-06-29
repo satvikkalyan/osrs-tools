@@ -295,8 +295,8 @@ function dropRowHtml(drop) {
             <td class="num mono">${formatGp(drop.fromPrice)}</td>
             <td class="num mono">${formatGp(drop.toPrice)}</td>
             <td class="num mono drop-pct">−${drop.dropPct.toFixed(1)}%</td>
-            <td class="num mono">${drop.windowMin.toFixed(0)}m</td>
-            <td class="num mono">${drop.dailyVolume.toLocaleString()}</td>
+            <td class="num mono mob-hide">${drop.windowMin.toFixed(0)}m</td>
+            <td class="num mono mob-hide">${drop.dailyVolume.toLocaleString()}</td>
             <td class="num drop-time">${ago}</td>
             <td class="num"><button class="drop-dismiss" data-drop-id="${drop.itemId}" data-drop-ts="${drop.detectedAt}" title="Dismiss">✕</button></td>
         </tr>

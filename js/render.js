@@ -9,10 +9,18 @@ function render() {
     const start = (state.page - 1) * state.pageSize;
     const rendered = sorted.slice(start, start + state.pageSize);
 
+    const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
     document.getElementById('loading').style.display = 'none';
     document.getElementById('table-wrap').style.display = 'block';
     document.getElementById('stats').style.display = 'grid';
-    document.getElementById('controls').style.display = 'grid';
+    // On mobile, controls start hidden — the filter toggle button reveals them.
+    // On desktop, show immediately.
+    if (!isMobile()) {
+        document.getElementById('controls').style.display = 'grid';
+    }
+    // Show the filter toggle button on mobile only
+    const toggleBtn = document.getElementById('flips-filter-toggle');
+    if (toggleBtn) toggleBtn.style.display = isMobile() ? 'flex' : 'none';
 
     // Stats
     setText('stat-scanned', state.items.length.toLocaleString());
@@ -127,13 +135,13 @@ function rowHtml(item, idx) {
                 </div>
             </td>
             <td class="num mono">${formatGp(item.buy)}</td>
-            <td class="num mono">${formatGp(item.sell)}</td>
-            <td class="num mono neg">${item.tax ? '−' + formatGp(item.tax) : '<span class="dim">—</span>'}</td>
+            <td class="num mono mob-hide">${formatGp(item.sell)}</td>
+            <td class="num mono neg mob-hide">${item.tax ? '−' + formatGp(item.tax) : '<span class="dim">—</span>'}</td>
             <td class="num mono pos">${formatGp(item.netMargin)}</td>
-            <td class="num mono ${marginPctClass}">${item.marginPct.toFixed(1)}%</td>
+            <td class="num mono mob-hide ${marginPctClass}">${item.marginPct.toFixed(1)}%</td>
             <td class="num mono ${volClass(item.dailyVolume)}" title="Daily total: ${item.dailyVolume.toLocaleString()}  ·  1h: ${item.volume.toLocaleString()} (min of buy/sell)">${item.dailyVolume.toLocaleString()}</td>
-            <td class="num mono">${item.buyLimit ? item.buyLimit.toLocaleString() : '<span class="dim">—</span>'}</td>
-            <td class="num mono ${ageClass}">${ageDisplay}</td>
+            <td class="num mono mob-hide">${item.buyLimit ? item.buyLimit.toLocaleString() : '<span class="dim">—</span>'}</td>
+            <td class="num mono mob-hide ${ageClass}">${ageDisplay}</td>
             <td class="num mono profit-cell">${formatGp(item.profitPerHour)}</td>
         </tr>
     `;

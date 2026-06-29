@@ -50,7 +50,6 @@ async function fetchData() {
         renderDecantTab();
         computeRepairs(mapping, latest.data);
         renderRepairTab();
-        preCacheIcons(mapping); // background — caches all icon blobs in IndexedDB
     } catch (err) {
         console.error('Flip Finder load failed:', err);
         showError(`Couldn't load prices: ${err.message || err}`);

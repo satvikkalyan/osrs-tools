@@ -24,70 +24,15 @@ function lsSet(key, data) {
     } catch (e) { /* quota exceeded — non-fatal, next load will just re-fetch */ }
 }
 
-// ---------- IndexedDB Icon Cache ----------
-// Stores item icon blobs locally so we skip 3 redirects per icon on every load.
-// Falls back to the Special:Filepath URL if anything fails.
-const ICON_DB_NAME    = 'osrs-icon-cache';
-const ICON_DB_VERSION = 1;
-const ICON_STORE_NAME = 'icons';
-const ICON_BATCH_SIZE = 20; // concurrent fetches during pre-cache
-
-let iconDB = null;
-const iconObjectURLs = new Map(); // iconName → objectURL (in-memory, rebuilt each session)
-
-function openIconDB() {
-    return new Promise((resolve, reject) => {
-        const req = indexedDB.open(ICON_DB_NAME, ICON_DB_VERSION);
-        req.onupgradeneeded = e => e.target.result.createObjectStore(ICON_STORE_NAME);
-        req.onsuccess  = e => resolve(e.target.result);
-        req.onerror    = e => reject(e.target.error);
-    });
-}
-
-async function initIconCache() {
-    try {
-        iconDB = await openIconDB();
-        const tx    = iconDB.transaction(ICON_STORE_NAME, 'readonly');
-        const store = tx.objectStore(ICON_STORE_NAME);
-        const [blobs, keys] = await Promise.all([
-            new Promise((res, rej) => { const r = store.getAll();     r.onsuccess = e => res(e.target.result); r.onerror = rej; }),
-            new Promise((res, rej) => { const r = store.getAllKeys(); r.onsuccess = e => res(e.target.result); r.onerror = rej; }),
-        ]);
-        keys.forEach((name, i) => iconObjectURLs.set(name, URL.createObjectURL(blobs[i])));
-    } catch (e) {
-        console.warn('Icon cache init failed:', e);
-    }
-}
-
+// ---------- Icon URLs ----------
+// Icons are served as regular <img> tags using the wiki's Special:Filepath
+// redirect. The browser loads only what's on screen (loading="lazy") and caches
+// via HTTP, so no pre-fetching is needed or wanted.
+//
+// IMPORTANT: Do NOT use fetch() on these URLs — the wiki CDN doesn't send
+// CORS headers, so blob-caching attempts will be blocked cross-origin and cause
+// 429s from the sheer volume of requests.
 function getIconSrc(iconName) {
     if (!iconName) return '';
-    if (iconObjectURLs.has(iconName)) return iconObjectURLs.get(iconName);
     return ICON_BASE + encodeURIComponent(iconName);
-}
-
-async function storeIconBlob(name, blob) {
-    if (!iconDB) return;
-    return new Promise((resolve, reject) => {
-        const tx = iconDB.transaction(ICON_STORE_NAME, 'readwrite');
-        tx.objectStore(ICON_STORE_NAME).put(blob, name);
-        tx.oncomplete = resolve;
-        tx.onerror    = reject;
-    });
-}
-
-async function preCacheIcons(mapping) {
-    if (!iconDB) return;
-    const names    = [...new Set(Object.values(mapping).map(i => i.icon).filter(Boolean))];
-    const uncached = names.filter(n => !iconObjectURLs.has(n));
-    if (!uncached.length) return;
-    for (let i = 0; i < uncached.length; i += ICON_BATCH_SIZE) {
-        const batch = uncached.slice(i, i + ICON_BATCH_SIZE);
-        await Promise.all(batch.map(async name => {
-            try {
-                const blob = await fetch(ICON_BASE + encodeURIComponent(name)).then(r => r.blob());
-                await storeIconBlob(name, blob);
-                iconObjectURLs.set(name, URL.createObjectURL(blob));
-            } catch (e) { /* non-fatal — will retry next session */ }
-        }));
-    }
 }

@@ -125,13 +125,13 @@ function renderDecantTab() {
                     </div>
                 </div>
             </td>
-            <td class="num"><span class="badge badge-hot">${escapeHtml(r.direction)}</span></td>
-            <td class="num mono">${r.buyQty}× ${formatGp(r.buyPrice)} gp</td>
-            <td class="num mono">${r.sellQty}× ${formatGp(r.sellPrice)} gp</td>
-            <td class="num mono dim">−${formatGp(r.cost)} gp</td>
-            <td class="num mono dim">+${formatGp(Math.round(r.revenue))} gp</td>
+            <td class="num mob-hide"><span class="badge badge-hot">${escapeHtml(r.direction)}</span></td>
+            <td class="num mono mob-hide">${r.buyQty}× ${formatGp(r.buyPrice)} gp</td>
+            <td class="num mono mob-hide">${r.sellQty}× ${formatGp(r.sellPrice)} gp</td>
+            <td class="num mono dim mob-hide">−${formatGp(r.cost)} gp</td>
+            <td class="num mono dim mob-hide">+${formatGp(Math.round(r.revenue))} gp</td>
             <td class="num mono ${profitClass} ${r.profit > 0 ? 'profit-cell' : ''}">${r.profit > 0 ? '+' : ''}${formatGp(Math.round(r.profit))} gp</td>
-            <td class="num mono dim">${r.profitPerHour != null ? formatGp(r.profitPerHour) + '/hr' : '—'}</td>
+            <td class="num mono dim mob-hide">${r.profitPerHour != null ? formatGp(r.profitPerHour) + '/hr' : '—'}</td>
             <td class="num mono ${r.dailyVolume ? volClass(r.dailyVolume) : 'dim'}">${r.dailyVolume ? r.dailyVolume.toLocaleString() : '—'}</td>
         </tr>`;
     }).join('');

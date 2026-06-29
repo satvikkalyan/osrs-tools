@@ -122,12 +122,12 @@ function renderRepairTab() {
             </td>
             <td class="num mono dim">−${formatGp(r.buyCost)} gp</td>
             <td class="num mono dim">−${repairLabel}</td>
-            <td class="num mono dim">+${formatGp(r.sellGross)} gp</td>
-            <td class="num mono dim">−${formatGp(r.tax)} gp</td>
+            <td class="num mono dim mob-hide">+${formatGp(r.sellGross)} gp</td>
+            <td class="num mono dim mob-hide">−${formatGp(r.tax)} gp</td>
             <td class="num mono ${profitClass} ${r.profit > 0 ? 'profit-cell' : ''}">
                 ${r.profit > 0 ? '+' : ''}${formatGp(Math.round(r.profit))} gp
             </td>
-            <td class="num mono dim">
+            <td class="num mono dim mob-hide">
                 ${r.profitPerHour > 0 ? formatGp(r.profitPerHour) + '/hr' : '—'}
             </td>
             <td class="num mono ${r.dailyVolume ? volClass(r.dailyVolume) : 'dim'}">${r.dailyVolume ? r.dailyVolume.toLocaleString() : '—'}</td>
