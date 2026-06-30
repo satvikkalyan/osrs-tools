@@ -1239,9 +1239,12 @@ footer.legal a:hover { color: var(--text); }
     }
 }
 
-/* Trending sidebar — full width on mobile */
+/* Trending sidebar — full width on mobile, header clears Dynamic Island */
 @media (max-width: 768px) {
     .trending-sidebar { width: 100%; }
+    .sidebar-header {
+        padding-top: max(16px, env(safe-area-inset-top));
+    }
 }
 
 @media (max-width: 768px) {
@@ -1329,22 +1332,28 @@ footer.legal a:hover { color: var(--text); }
     /* ── Drops / Decant / Repair controls ── */
     .drops-controls {
         flex-direction: column;
+        align-items: stretch;
         gap: 8px;
     }
     .drops-controls-left {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
+        flex: none;
+        width: 100%;
     }
     .drops-controls-right {
         display: flex;
         gap: 8px;
+        width: 100%;
     }
+    .drops-controls-right button { flex: 1; }
     .drops-controls .control { flex-direction: column; gap: 4px; }
     .drops-controls .control label { font-size: 12px; }
 
     /* ── Tables: hide non-essential columns on mobile ── */
     .mob-hide { display: none !important; }
+    .mob-only { display: block !important; }
 
     /* Table base: allow horizontal scroll as a fallback */
     .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -1403,6 +1412,7 @@ footer.legal a:hover { color: var(--text); }
 @media (min-width: 769px) {
     .filter-toggle-btn { display: none !important; }
     .mob-hide { display: table-cell; }
+    .mob-only { display: none !important; }
 }
 
 /* ─── Star button (in tables) ──────────────────────────────────────────────── */

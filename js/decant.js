@@ -124,6 +124,10 @@ function renderDecantTab() {
                         <span class="badge ${r.members ? 'badge-mem' : 'badge-f2p'}">${r.members ? 'P2P' : 'F2P'}</span>
                         ${r.buyLimit ? `<span class="dim tiny">limit ${r.buyLimit.toLocaleString()}/4h</span>` : ''}
                     </div>
+                    <div class="item-meta mob-only" style="margin-top:3px;color:var(--text-dim);">
+                        buy <span class="mono" style="color:var(--text);">${formatGp(r.buyPrice)}</span>
+                        → sell <span class="mono" style="color:var(--text);">${formatGp(r.sellPrice)}</span> gp
+                    </div>
                 </div>
             </td>
             <td class="num mono mob-hide">${r.buyQty}× ${formatGp(r.buyPrice)} gp</td>
