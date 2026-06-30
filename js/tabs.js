@@ -2,7 +2,7 @@
 // ---------- Sortable table headers for non-Flips tabs ----------
 attachTableSort(document.querySelector('#drops-tab table'),  dropsSort,  renderDropsTab);
 attachTableSort(document.querySelector('#decant-tab table'), decantSort, renderDecantTab);
-attachTableSort(document.querySelector('#repair-tab table'), repairSort, renderRepairTab);
+attachTableSort(document.querySelector('#craft-tab table'),  craftSort,  renderCraftTab);
 
 // ---------- Mobile filter toggle ----------
 document.getElementById('flips-filter-toggle')?.addEventListener('click', function () {
@@ -21,11 +21,11 @@ document.querySelectorAll('#tabs .tab').forEach(tab => {
         document.getElementById('flips-tab').style.display     = which === 'flips'     ? 'block' : 'none';
         document.getElementById('drops-tab').style.display     = which === 'drops'     ? 'block' : 'none';
         document.getElementById('decant-tab').style.display    = which === 'decant'    ? 'block' : 'none';
-        document.getElementById('repair-tab').style.display    = which === 'repair'    ? 'block' : 'none';
+        document.getElementById('craft-tab').style.display     = which === 'craft'     ? 'block' : 'none';
         document.getElementById('favorites-tab').style.display = which === 'favorites' ? 'block' : 'none';
         if (which === 'drops')     renderDropsTab();
         if (which === 'decant')    renderDecantTab();
-        if (which === 'repair')    renderRepairTab();
+        if (which === 'craft')     renderCraftTab();
         if (which === 'favorites') renderFavoritesTab();
     });
 });
@@ -55,13 +55,26 @@ document.getElementById('decant-min-profit').addEventListener('input', renderDec
 document.getElementById('decant-min-volume').addEventListener('input', renderDecantTab);
 document.getElementById('decant-refresh').addEventListener('click', fetchData);
 
-document.getElementById('repair-smithing').addEventListener('input', renderRepairTab);
-document.getElementById('repair-min-profit').addEventListener('input', renderRepairTab);
-document.getElementById('repair-min-volume').addEventListener('input', renderRepairTab);
-document.getElementById('repair-refresh').addEventListener('click', fetchData);
+// Craft tab wiring
+document.getElementById('craft-smithing').addEventListener('input', renderCraftTab);
+document.getElementById('craft-min-profit').addEventListener('input', renderCraftTab);
+document.getElementById('craft-min-volume').addEventListener('input', renderCraftTab);
+document.getElementById('craft-type-filter').addEventListener('change', renderCraftTab);
+document.getElementById('craft-can-do').addEventListener('change', renderCraftTab);
+document.getElementById('craft-refresh').addEventListener('click', fetchData);
+
+// Player stats fetch
+document.getElementById('craft-fetch-stats').addEventListener('click', () => {
+    const rsn = document.getElementById('craft-rsn').value.trim();
+    if (rsn) loadPlayerStats(rsn);
+});
+document.getElementById('craft-rsn').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('craft-fetch-stats').click();
+});
+// Pre-fill saved RSN
+if (playerName) document.getElementById('craft-rsn').value = playerName;
 
 // Live-update the "X ago" text every 30s so the drops list stays current
-// without re-rendering rows.
 setInterval(() => {
     const drops = document.getElementById('drops-tab');
     if (drops && drops.style.display !== 'none') renderDropsTab();

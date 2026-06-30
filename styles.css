@@ -1429,6 +1429,13 @@ footer.legal a:hover { color: var(--text); }
     #volume-chart-container { height: 80px !important; }
     .dchart-wrap { height: 160px !important; }
 
+    /* ── Craft player row ── */
+    .craft-player-row { flex-direction: column; align-items: stretch; gap: 8px; }
+    .craft-player-left { flex-wrap: wrap; }
+    .craft-player-left input[type="text"] { flex: 1; min-width: 120px; }
+    .craft-skill-pills { gap: 4px; }
+    .skill-pill { font-size: 10px; padding: 2px 6px; }
+
     /* ── Import modal ── */
     .import-modal {
         width: 96vw !important;
@@ -1580,6 +1587,63 @@ th.star-col, td.star-col {
     color: var(--text-dim);
 }
 .fav-loading { padding: 40px 24px; color: var(--text-dim); font-size: 13px; text-align: center; }
+
+/* ─── Craft tab — player panel ──────────────────────────────────────────────── */
+.craft-player-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 2px;
+    flex-wrap: wrap;
+}
+.craft-player-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.player-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(251,191,36,0.15);
+    color: var(--gold);
+    border: 1px solid rgba(251,191,36,0.3);
+    border-radius: 14px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: default;
+    white-space: nowrap;
+}
+.player-badge::before { content: '⚔'; font-size: 11px; }
+.craft-skill-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+.skill-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-size: 11px;
+    white-space: nowrap;
+}
+.skill-pill .sp-val {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.skill-pill.sp-ok  { border-color: rgba(74,222,128,0.3); }
+.skill-pill.sp-low { border-color: rgba(248,113,113,0.3); color: var(--text-dim); }
 .fav-empty-icon { font-size: 42px; margin-bottom: 14px; }
 .fav-empty-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
 .fav-empty-sub { font-size: 13px; line-height: 1.6; max-width: 300px; }

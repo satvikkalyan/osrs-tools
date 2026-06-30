@@ -49,7 +49,7 @@ async function fetchData() {
         computeDecants(mapping, latest.data);
         renderDecantTab();
         computeRepairs(mapping, latest.data);
-        renderRepairTab();
+        renderCraftTab();
         if (typeof onDataRefreshed === 'function') onDataRefreshed();
     } catch (err) {
         console.error('Flip Finder load failed:', err);
