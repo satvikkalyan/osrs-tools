@@ -430,9 +430,16 @@ tbody tr:hover { background: var(--bg-row-hover); }
 }
 .drops-controls-left {
     display: grid;
-    grid-template-columns: repeat(6, auto);
+    grid-template-columns: repeat(4, auto);
     gap: 10px;
     flex: 1;
+}
+/* Checkbox toggles row — sits between the input grid and the refresh button */
+.drops-toggles-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    flex-shrink: 0;
 }
 .drops-controls-right {
     display: flex;
@@ -1341,6 +1348,29 @@ footer.legal a:hover { color: var(--text); }
         gap: 8px;
         flex: none;
         width: 100%;
+    }
+    /* Constrain grid cells so inputs don't blow out their column */
+    .drops-controls-left .control {
+        min-width: 0;
+        overflow: hidden;
+    }
+    .drops-controls-left input[type="number"] {
+        width: 100%;
+        min-width: 0;
+    }
+    /* Toggles row: full-width, separated with a divider line */
+    .drops-toggles-row {
+        display: flex;
+        gap: 8px;
+        width: 100%;
+        padding-top: 6px;
+        border-top: 1px solid var(--border);
+        align-items: center;
+    }
+    .drops-toggles-row .auto-toggle {
+        flex: 1;
+        justify-content: center;
+        font-size: 12px;
     }
     .drops-controls-right {
         display: flex;

@@ -190,18 +190,16 @@
                     <label>Window (minutes)</label>
                     <input type="number" id="drop-window-min" value="5" min="1" max="30" class="mono">
                 </div>
-                <div class="control" style="justify-content:end;">
-                    <label class="auto-toggle" style="padding:6px 10px;">
-                        <input type="checkbox" id="drop-notify" checked>
-                        <span>Notify</span>
-                    </label>
-                </div>
-                <div class="control" style="justify-content:end;">
-                    <label class="auto-toggle" style="padding:6px 10px;" title="Show only drops on items from the curated watchlist.">
-                        <input type="checkbox" id="drop-watchlist-only">
-                        <span>★ Watchlist only</span>
-                    </label>
-                </div>
+            </div>
+            <div class="drops-toggles-row">
+                <label class="auto-toggle" style="padding:6px 10px;" title="Play a sound and show a browser notification when a new drop is detected.">
+                    <input type="checkbox" id="drop-notify" checked>
+                    <span>🔔 Notify on drop</span>
+                </label>
+                <label class="auto-toggle" style="padding:6px 10px;" title="Show only drops on items from the curated watchlist.">
+                    <input type="checkbox" id="drop-watchlist-only">
+                    <span>★ Watchlist only</span>
+                </label>
             </div>
             <div class="drops-controls-right">
                 <button class="btn-refresh-drops primary" id="drops-refresh" title="Re-fetch latest prices and run detection">↻ Refresh</button>

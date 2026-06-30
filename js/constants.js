@@ -39,3 +39,4 @@ const UNLIMITED_PROXY = 1_000_000;
 if (typeof SUPABASE_URL      === 'undefined') var SUPABASE_URL      = '';
 if (typeof SUPABASE_ANON_KEY === 'undefined') var SUPABASE_ANON_KEY = '';
 if (typeof PASSCODE          === 'undefined') var PASSCODE          = '';
+if (typeof FAVS_SYNC_ID      === 'undefined') var FAVS_SYNC_ID      = '';

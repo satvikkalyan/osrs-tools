@@ -1,7 +1,8 @@
 'use strict';
 // ---------- Favorites ----------
 // Star any item from Flips, Drops, Decant, or Repair to pin it here.
-// Stored in localStorage per category. Card-based UI with live stats.
+// Stored in localStorage AND synced to Supabase (user_favorites table) when
+// FAVS_SYNC_ID is set in config.js. Same ID across devices = shared favorites.
 
 const FAV_LS = {
     flips:  'osrs-fav-flips',
@@ -18,10 +19,88 @@ const favs = {
     repair: new Set(JSON.parse(localStorage.getItem(FAV_LS.repair) || '[]')),
 };
 
+// ---------- Supabase sync ----------
+
+const sbFavsEnabled = () => !!(SUPABASE_URL && SUPABASE_ANON_KEY && FAVS_SYNC_ID);
+
+function favsSbHeaders() {
+    return {
+        'apikey':        SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type':  'application/json',
+        'Prefer':        'resolution=merge-duplicates',
+    };
+}
+
+let _syncTimer = null;
+function debouncedSync() {
+    clearTimeout(_syncTimer);
+    _syncTimer = setTimeout(syncFavsToSupabase, 1200);
+}
+
+async function syncFavsToSupabase() {
+    if (!sbFavsEnabled()) return;
+    const payload = {
+        user_id:    FAVS_SYNC_ID,
+        favs:       {
+            flips:  [...favs.flips],
+            drops:  [...favs.drops],
+            decant: [...favs.decant],
+            repair: [...favs.repair],
+        },
+        updated_at: new Date().toISOString(),
+    };
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/user_favorites`, {
+            method:  'POST',
+            headers: favsSbHeaders(),
+            body:    JSON.stringify(payload),
+        });
+    } catch (e) {
+        console.warn('[favorites] sync failed:', e.message);
+    }
+}
+
+async function loadFavsFromSupabase() {
+    if (!sbFavsEnabled()) return;
+    try {
+        const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/user_favorites?user_id=eq.${encodeURIComponent(FAVS_SYNC_ID)}&select=favs`,
+            { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+        );
+        if (!res.ok) throw new Error(`${res.status}`);
+        const rows = await res.json();
+        if (!rows.length) return; // nothing saved yet
+        const remote = rows[0].favs || {};
+        // Replace local sets with remote data (remote is the source of truth)
+        if (Array.isArray(remote.flips))  { favs.flips  = new Set(remote.flips.map(String));  }
+        if (Array.isArray(remote.drops))  { favs.drops  = new Set(remote.drops.map(String));  }
+        if (Array.isArray(remote.decant)) { favs.decant = new Set(remote.decant); }
+        if (Array.isArray(remote.repair)) { favs.repair = new Set(remote.repair); }
+        // Persist the synced state to localStorage so it works offline
+        for (const [type, lsKey] of Object.entries(FAV_LS)) {
+            localStorage.setItem(lsKey, JSON.stringify([...favs[type]]));
+        }
+        updateFavBadge();
+        renderFavoritesTab();
+        // Re-render star buttons across the active tab
+        document.querySelectorAll('.star-btn[data-fav-type]').forEach(btn => {
+            const on = isFav(btn.dataset.favType, btn.dataset.favKey);
+            btn.classList.toggle('starred', on);
+            btn.textContent = on ? '★' : '☆';
+        });
+        console.log('[favorites] synced from Supabase — flips:', favs.flips.size,
+            'drops:', favs.drops.size, 'decant:', favs.decant.size, 'repair:', favs.repair.size);
+    } catch (e) {
+        console.warn('[favorites] load from Supabase failed:', e.message);
+    }
+}
+
 function saveFavs() {
     for (const [type, lsKey] of Object.entries(FAV_LS)) {
         localStorage.setItem(lsKey, JSON.stringify([...favs[type]]));
     }
+    debouncedSync();
 }
 
 function isFav(type, key) {
@@ -227,3 +306,5 @@ function onDataRefreshed() {
 }
 
 updateFavBadge();
+// Pull favorites from Supabase on startup (non-blocking)
+loadFavsFromSupabase();
